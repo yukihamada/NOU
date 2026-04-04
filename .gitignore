@@ -1,0 +1,16 @@
+.build/
+.swiftpm/
+*.o
+*.d
+*.swiftdeps
+*.swiftdeps~
+NOU.app/
+NOU-Installer.dmg
+Package.resolved
+.DS_Store
+*.output
+*.bak
+node_modules/
+NOU-Remote.app/
+NOU-Remote-bin
+build/
