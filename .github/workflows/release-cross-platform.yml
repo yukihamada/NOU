@@ -23,6 +23,33 @@ jobs:
       - name: Build
         working-directory: nou-server
         run: cargo build --release --target x86_64-unknown-linux-musl
+      - name: Package AppImage
+        run: |
+          BIN=nou-server/target/x86_64-unknown-linux-musl/release/nou-server
+          # Make AppDir
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp $BIN AppDir/usr/bin/nou-server
+          cat > AppDir/nou-server.desktop << 'EOF'
+          [Desktop Entry]
+          Name=NOU
+          Exec=nou-server
+          Icon=nou-server
+          Type=Application
+          Categories=Utility;Network;
+          Comment=Local AI Server
+          EOF
+          # Simple PNG icon (placeholder — base64 encoded 1x1 px)
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' | base64 -d > AppDir/usr/share/icons/hicolor/256x256/apps/nou-server.png
+          cp AppDir/usr/share/icons/hicolor/256x256/apps/nou-server.png AppDir/nou-server.png
+          cp AppDir/nou-server.desktop AppDir/.DirIcon 2>/dev/null || true
+          # Download appimagetool
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool AppDir NOU-linux-x86_64.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOU-linux-x86_64-AppImage
+          path: NOU-linux-x86_64.AppImage
       - run: |
           cp nou-server/target/x86_64-unknown-linux-musl/release/nou-server ./nou-server-linux-x86_64
           chmod +x nou-server-linux-x86_64
@@ -62,11 +89,21 @@ jobs:
       - name: Build
         working-directory: nou-server
         run: cargo build --release
-      - run: copy nou-server\target\release\nou-server.exe nou-server-windows-x86_64.exe
+      - name: Create icon
+        shell: powershell
+        run: |
+          # Minimal valid ICO (16x16, 1bpp)
+          $ico = [Convert]::FromBase64String("AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+          [IO.File]::WriteAllBytes("$pwd\nou-server\icon.ico", $ico)
+      - name: Build installer
+        shell: cmd
+        run: |
+          copy "nou-server\target\release\nou-server.exe" "nou-server\nou-server.exe"
+          iscc "nou-server\installer.iss" /O"." /F"NOU-Setup-Windows"
       - uses: actions/upload-artifact@v4
         with:
-          name: nou-server-windows-x86_64
-          path: nou-server-windows-x86_64.exe
+          name: NOU-Setup-Windows
+          path: NOU-Setup-Windows.exe
 
   release:
     name: Create GitHub Release
@@ -84,59 +121,21 @@ jobs:
           cat > install.sh << 'SCRIPT'
           #!/bin/bash
           set -e
-          OS=$(uname -s)
           ARCH=$(uname -m)
-          VERSION=${1:-latest}
-          BASE="https://github.com/yukihamada/NOU/releases"
-
-          if [ "$VERSION" = "latest" ]; then
-            URL="$BASE/latest/download"
-          else
-            URL="$BASE/download/$VERSION"
-          fi
-
+          BASE="https://github.com/yukihamada/NOU/releases/latest/download"
           if [ "$ARCH" = "x86_64" ]; then
-            BIN="nou-server-linux-x86_64"
+            BIN="NOU-linux-x86_64.AppImage"
           elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
             BIN="nou-server-linux-arm64"
           else
-            echo "Unsupported architecture: $ARCH"
-            exit 1
+            echo "Unsupported: $ARCH"; exit 1
           fi
-
-          echo "Downloading NOU server..."
-          curl -fsSL "$URL/$BIN" -o /usr/local/bin/nou-server
+          echo "Downloading NOU..."
+          curl -fsSL "$BASE/$BIN" -o /usr/local/bin/nou-server
           chmod +x /usr/local/bin/nou-server
-
-          echo ""
-          echo "✓ NOU server installed!"
-          echo ""
-          echo "Next steps:"
-          echo "  1. Install Ollama: https://ollama.com/download"
-          echo "  2. Pull a model:   ollama pull gemma3:4b"
-          echo "  3. Start NOU:      nou-server"
-          echo "  4. Open dashboard: http://localhost:4001"
+          echo "✓ NOU installed! Run: nou-server"
           SCRIPT
           chmod +x install.sh
-
-          cat > install.ps1 << 'PS'
-          $Version = if ($args[0]) { $args[0] } else { "latest" }
-          $Base = "https://github.com/yukihamada/NOU/releases"
-          if ($Version -eq "latest") { $Url = "$Base/latest/download" } else { $Url = "$Base/download/$Version" }
-          $Bin = "nou-server-windows-x86_64.exe"
-          $Dest = "$env:LOCALAPPDATA\NOU\nou-server.exe"
-          New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\NOU" | Out-Null
-          Write-Host "Downloading NOU server..."
-          Invoke-WebRequest "$Url/$Bin" -OutFile $Dest
-          Write-Host ""
-          Write-Host "NOU server installed to $Dest"
-          Write-Host ""
-          Write-Host "Next steps:"
-          Write-Host "  1. Install Ollama: https://ollama.com/download"
-          Write-Host "  2. Pull a model:   ollama pull gemma3:4b"
-          Write-Host "  3. Start NOU:      $Dest"
-          Write-Host "  4. Open dashboard: http://localhost:4001"
-          PS
 
       - name: Get version
         id: version
@@ -150,48 +149,33 @@ jobs:
           body: |
             ## NOU ${{ steps.version.outputs.tag }}
 
-            ### Mac (Apple Silicon) — β ベータ版
-            [NOU.app をダウンロード](https://github.com/yukihamada/NOU/releases/latest) ← 従来のリンク
+            ### 🍎 Mac (Apple Silicon) — β ベータ版
+            **[⬇ NOU-v2.2.dmg をダウンロード](https://github.com/yukihamada/NOU/releases/latest/download/NOU-v2.2.dmg)**
+            DMGを開いて Applications にドラッグするだけ。
 
             ---
 
-            ### Linux — α アルファ版
-
-            **クイックインストール:**
-            ```bash
-            curl -sSL https://github.com/yukihamada/NOU/releases/latest/download/install.sh | sudo bash
-            ```
-
-            **手動:**
-            | アーキテクチャ | ファイル |
-            |---|---|
-            | x86_64 (Intel/AMD) | `nou-server-linux-x86_64` |
-            | arm64 (Raspberry Pi 5, AWS Graviton) | `nou-server-linux-arm64` |
+            ### 🐧 Linux — α アルファ版
+            **[⬇ NOU-linux-x86_64.AppImage をダウンロード](https://github.com/yukihamada/NOU/releases/latest/download/NOU-linux-x86_64.AppImage)**
+            ダウンロード後、実行権限を付けてダブルクリック。
 
             ---
 
-            ### Windows — α アルファ版
-
-            **PowerShell:**
-            ```powershell
-            irm https://github.com/yukihamada/NOU/releases/latest/download/install.ps1 | iex
-            ```
-
-            **手動:** `nou-server-windows-x86_64.exe` をダウンロードして実行
+            ### 🪟 Windows — α アルファ版
+            **[⬇ NOU-Setup-Windows.exe をダウンロード](https://github.com/yukihamada/NOU/releases/latest/download/NOU-Setup-Windows.exe)**
+            インストーラーをダブルクリックして Next → Install。
 
             ---
 
-            ### セットアップ (Linux/Windows共通)
+            ### セットアップ (共通)
             1. [Ollama](https://ollama.com/download) をインストール
             2. `ollama pull gemma3:4b`
-            3. `nou-server` を起動
-            4. ブラウザで http://localhost:4001 を開く
-            5. Claude Code の `ANTHROPIC_BASE_URL=http://localhost:4001` に設定
+            3. NOU を起動 → http://localhost:4001
+            4. `ANTHROPIC_BASE_URL=http://localhost:4001` で Claude Code 接続
           files: |
-            nou-server-linux-x86_64
+            NOU-linux-x86_64.AppImage
             nou-server-linux-arm64
-            nou-server-windows-x86_64.exe
+            NOU-Setup-Windows.exe
             install.sh
-            install.ps1
           draft: false
-          prerelease: true
+          prerelease: false
