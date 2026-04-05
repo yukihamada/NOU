@@ -26,6 +26,19 @@ mkdir -p "$APP_DIR/Contents/Resources"
 
 cp "$BINARY" "$APP_DIR/Contents/MacOS/$APP_NAME"
 
+# Copy icon if available
+ICON_SRC="../Sources/App/Assets.xcassets/AppIcon.appiconset/icon_1024.png"
+if [ -f "$ICON_SRC" ] && command -v iconutil &>/dev/null; then
+    ICONSET=$(mktemp -d)/NOU.iconset
+    mkdir -p "$ICONSET"
+    for s in 16 32 128 256 512; do
+        sips -z $s $s "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}.png" &>/dev/null
+        s2=$((s*2)); sips -z $s2 $s2 "$ICON_SRC" --out "$ICONSET/icon_${s}x${s}@2x.png" &>/dev/null
+    done
+    iconutil -c icns "$ICONSET" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
+    echo "  Icon: AppIcon.icns generated"
+fi
+
 # Info.plist
 cat > "$APP_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -46,6 +59,8 @@ cat > "$APP_DIR/Contents/Info.plist" << PLIST
     <string>APPL</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSBonjourServices</key>

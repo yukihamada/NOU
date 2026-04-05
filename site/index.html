@@ -1,401 +1,404 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NOU — Private AI on Your Mac</title>
-<meta name="description" content="Run 122B-parameter AI models locally on Apple Silicon. No cloud, no subscriptions, complete privacy. Connect your Macs into a distributed AI mesh.">
-<meta name="author" content="EnablerDAO">
+<title>NOU — Macで動かすプライベートAI</title>
+<meta name="description" content="クラウド不要。サブスク不要。MacだけでClaude CodeやCursorを動かすローカルAI。Qwen3・Gemma 4・DeepSeek-R1・Llama 4対応。">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="canonical" href="https://nou.link/">
+<link rel="alternate" hreflang="en" href="https://nou.link/">
+<link rel="alternate" hreflang="ja" href="https://nou.link/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="NOU — Private AI on Your Mac">
-<meta property="og:description" content="Run 122B-parameter AI models locally on Apple Silicon. No cloud, no subscriptions. Your AI stays yours.">
+<meta property="og:title" content="NOU — Macで動かすプライベートAI">
+<meta property="og:description" content="クラウド不要。月額0円。MacだけでAIを動かす。Qwen3・Gemma 4・DeepSeek-R1・Llama 4対応。">
 <meta property="og:url" content="https://nou.link/">
-<meta property="og:site_name" content="NOU">
 <meta property="og:image" content="https://nou.link/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="NOU — Private AI on Your Mac">
-<meta name="twitter:description" content="Run 122B LLMs locally on Apple Silicon. No cloud. No subscriptions.">
+<meta name="twitter:title" content="NOU — Macで動かすプライベートAI">
 <meta name="twitter:image" content="https://nou.link/og.png">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"NOU","description":"Run state-of-the-art AI models locally on Apple Silicon. Menu bar app with distributed networking.","operatingSystem":"macOS 14+","applicationCategory":"DeveloperApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Organization","name":"EnablerDAO","url":"https://enablerdao.com"},"license":"https://opensource.org/licenses/MIT"}
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://enabler-analytics.fly.dev/t.js" defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a0a;--card:#111;--card-hover:#161616;--border:#1e1e1e;--border-hover:#2a2a2a;--text:#ededed;--muted:#888;--dim:#555;--accent:#58a6ff;--accent2:#a78bfa;--grad:linear-gradient(135deg,#58a6ff,#a78bfa);--grad-subtle:linear-gradient(135deg,rgba(88,166,255,.12),rgba(167,139,250,.08))}
+:root{
+  --bg:#0a0a0a;--card:#111;--border:#1e1e1e;
+  --text:#ededed;--muted:#888;--dim:#555;
+  --accent:#58a6ff;--accent2:#a78bfa;
+  --green:#3fb950;
+  --grad:linear-gradient(135deg,#58a6ff,#a78bfa);
+}
 html{scroll-behavior:smooth}
 body{font-family:'Inter','Noto Sans JP',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:256px}
-a{color:var(--accent);text-decoration:none;transition:opacity .2s}a:hover{opacity:.85}
-.container{max-width:1080px;margin:0 auto;padding:0 24px}
+a{color:var(--accent);text-decoration:none;transition:opacity .2s}a:hover{opacity:.8}
 
-/* Fade-in on scroll */
-.fade-in{opacity:0;transform:translateY(30px);transition:opacity .8s ease-out,transform .8s ease-out}
-.fade-in.visible{opacity:1;transform:translateY(0)}
-
-/* Nav */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.04)}
-.nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;color:var(--text)}
-.nav-links{display:flex;align-items:center;gap:20px}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05)}
+.nav-logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;align-items:center;gap:24px}
 .nav-links a{font-size:13px;color:var(--muted);font-weight:500;transition:color .2s}
 .nav-links a:hover{color:var(--text);opacity:1}
-.nav-badge{font-size:11px;color:var(--accent2);background:rgba(167,139,250,.12);padding:3px 8px;border-radius:6px;font-weight:600}
-.nav-dl{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#000;background:var(--grad);border-radius:8px;padding:6px 14px;font-weight:600;transition:all .2s}
-.nav-dl:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(88,166,255,.3);color:#000;opacity:1}
-.sister-link{font-size:11px;color:var(--dim);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:3px 8px;transition:all .2s}
-.sister-link:hover{color:var(--muted);border-color:rgba(255,255,255,.1);opacity:1}
-/* Hamburger */
-.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px}
-.hamburger span{display:block;width:22px;height:2px;background:var(--muted);border-radius:2px;margin:5px 0;transition:all .3s}
-.hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
-.hamburger.active span:nth-child(2){opacity:0}
-.hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-.mobile-menu{display:none;position:fixed;top:0;left:0;right:0;background:rgba(10,10,10,.97);backdrop-filter:blur(20px);padding:80px 24px 32px;flex-direction:column;gap:20px;z-index:99;transform:translateY(-100%);transition:transform .4s cubic-bezier(.16,1,.3,1)}
-.mobile-menu.open{transform:translateY(0)}
-.mobile-menu a{font-size:18px;color:var(--muted);padding:12px 0;border-bottom:1px solid var(--border);display:block}
-/* Screenshot mockup */
-.menubar-mock{max-width:380px;margin:40px auto 0;background:#1a1a1a;border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-family:var(--font-mono,monospace);font-size:12px;color:var(--muted);line-height:1.8}
-.menubar-mock .title{color:var(--text);font-weight:600;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.menubar-mock .row{display:flex;justify-content:space-between;padding:2px 0}
-.menubar-mock .green{color:#3fb950}
-.menubar-mock .blue{color:var(--accent)}
-.menubar-mock .sep{border-top:1px solid var(--border);margin:6px 0}
-/* vs-section */
-.vs-section{margin-top:40px;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:18px}
-.vs-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px}
-.vs-col h4{font-size:14px;font-weight:700;margin-bottom:8px}
-.vs-col ul{list-style:none;font-size:13px;color:var(--muted);line-height:2}
-.vs-col ul li::before{content:'✓ ';color:var(--accent)}
-.vs-col.other ul li::before{content:'✗ ';color:#f85149}
-@media(max-width:768px){
-  .nav-links{display:none}
-  .hamburger{display:flex;flex-direction:column}
-  .mobile-menu{display:flex}
-  .features-grid,.tier-grid{grid-template-columns:1fr}
-  .sister{grid-template-columns:1fr}
-  .section-heading{font-size:28px}
-  .hero h1{font-size:40px;letter-spacing:-2px}
-  .vs-grid{grid-template-columns:1fr}
-}
+.btn-dl{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#000;background:var(--grad);border-radius:8px;padding:7px 16px;transition:all .2s}
+.btn-dl:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(88,166,255,.35);opacity:1;color:#000}
+@media(max-width:680px){.nav-links{display:none}}
 
-/* Hero */
-.hero{text-align:center;padding:160px 0 100px;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;top:-300px;left:50%;transform:translateX(-50%);width:1200px;height:1200px;background:radial-gradient(circle,rgba(88,166,255,.06) 0%,rgba(167,139,250,.03) 30%,transparent 65%);pointer-events:none}
-.hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:200px;background:linear-gradient(to top,var(--bg),transparent);pointer-events:none}
+/* HERO */
+.hero{text-align:center;padding:160px 24px 100px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:900px;height:900px;background:radial-gradient(circle,rgba(88,166,255,.07) 0%,transparent 65%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--accent2);background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.2);border-radius:20px;padding:5px 14px;margin-bottom:32px;letter-spacing:.5px}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-size:64px;font-weight:800;letter-spacing:-3px;line-height:1.05;margin-bottom:24px}
+.hero h1 span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:20px;color:var(--muted);max-width:520px;margin:0 auto 48px;line-height:1.6}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:#000;background:var(--grad);border-radius:12px;padding:14px 28px;transition:all .2s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(88,166,255,.4);opacity:1;color:#000}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:13px 24px;transition:all .2s}
+.btn-secondary:hover{color:var(--text);border-color:var(--accent);opacity:1}
+.hero-sub{margin-top:20px;font-size:13px;color:var(--dim)}
+.hero-sub a{color:var(--dim);text-decoration:underline;text-decoration-color:var(--border)}
 
-/* Neural mesh animation */
-.hero-mesh{display:flex;align-items:center;justify-content:center;gap:6px;height:80px;margin:0 auto 48px}
-.mesh-node{width:12px;height:12px;border-radius:50%;background:var(--grad);animation:mesh-pulse 2s ease-in-out infinite;box-shadow:0 0 20px rgba(88,166,255,.3)}
-.mesh-node:nth-child(1){animation-delay:0s}
-.mesh-node:nth-child(2){animation-delay:.3s;width:8px;height:8px;opacity:.7}
-.mesh-node:nth-child(3){animation-delay:.6s;width:16px;height:16px}
-.mesh-node:nth-child(4){animation-delay:.2s;width:10px;height:10px;opacity:.8}
-.mesh-node:nth-child(5){animation-delay:.5s;width:14px;height:14px}
-.mesh-line{width:40px;height:2px;background:linear-gradient(90deg,rgba(88,166,255,.4),rgba(167,139,250,.4));animation:mesh-line 2s ease-in-out infinite alternate}
-@keyframes mesh-pulse{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1);opacity:1}}
-@keyframes mesh-line{0%{opacity:.2;transform:scaleX(.5)}100%{opacity:.6;transform:scaleX(1)}}
+/* MOCKUP */
+.mockup{max-width:360px;margin:64px auto 0;background:#161b22;border:1px solid #30363d;border-radius:12px;overflow:hidden;box-shadow:0 0 80px rgba(88,166,255,.08)}
+.mockup-bar{background:#0d1117;padding:12px 16px;border-bottom:1px solid #30363d;display:flex;align-items:center;gap:8px}
+.mockup-dot{width:10px;height:10px;border-radius:50%}
+.mockup-body{padding:14px 16px;font-family:monospace;font-size:12px;line-height:1.9;color:#8b949e}
+.mockup-body .g{color:#3fb950}.mockup-body .b{color:#58a6ff}.mockup-body .p{color:#a78bfa}.mockup-body .w{color:#ededed}
 
-.hero h1{font-size:64px;font-weight:800;letter-spacing:-3px;line-height:1.1;margin-bottom:24px}
-.hero h1 .gradient{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero .subtitle{font-size:20px;color:var(--muted);max-width:640px;margin:0 auto 48px;line-height:1.6}
-.hero-ctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
-.btn-primary{display:inline-flex;align-items:center;gap:10px;background:var(--grad);color:#fff;font-size:16px;font-weight:600;padding:16px 32px;border-radius:14px;transition:transform .15s,box-shadow .15s}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(88,166,255,.35);color:#fff;opacity:1}
-.btn-primary svg{width:20px;height:20px;fill:currentColor}
-.btn-secondary{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);color:var(--text);font-size:16px;font-weight:600;padding:16px 32px;border-radius:14px;border:1px solid rgba(255,255,255,.1);transition:all .15s}
-.btn-secondary:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);transform:translateY(-2px);color:var(--text);opacity:1}
-.hero-meta{font-size:13px;color:var(--dim);margin-top:16px}
-.hero-badges{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:6px 14px;font-weight:500}
+/* SECTION */
+.section{padding:100px 24px}
+.container{max-width:1040px;margin:0 auto}
+.section-label{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;margin-bottom:12px}
+.section-title{font-size:40px;font-weight:800;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px}
+.section-sub{font-size:17px;color:var(--muted);max-width:520px;line-height:1.6}
 
-/* Sections */
-section{padding:100px 0}
-.section-label{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:3px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
-.section-heading{font-size:40px;font-weight:800;letter-spacing:-1.5px;line-height:1.2;margin-bottom:20px}
-.section-desc{font-size:17px;color:var(--muted);max-width:560px;line-height:1.7}
-.section-center{text-align:center}
-.section-center .section-desc{margin:0 auto}
+/* BENEFITS */
+.benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:64px}
+.benefit{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;transition:border-color .2s}
+.benefit:hover{border-color:#2a2a2a}
+.benefit-icon{font-size:32px;margin-bottom:16px}
+.benefit h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.benefit p{font-size:14px;color:var(--muted);line-height:1.7}
+@media(max-width:768px){.benefits{grid-template-columns:1fr}}
 
-/* Features */
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px}
-.feat-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:30px 26px;transition:all .3s;position:relative;overflow:hidden}
-.feat-card:hover{border-color:var(--border-hover);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.4)}
-.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad);opacity:0;transition:opacity .3s}
-.feat-card:hover::before{opacity:1}
-.feat-card-icon{width:44px;height:44px;background:var(--grad-subtle);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px}
-.feat-card h3{font-size:16px;font-weight:700;margin-bottom:8px}
-.feat-card p{font-size:14px;color:var(--muted);line-height:1.6}
+/* TIER CARDS */
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px}
+.tier{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;text-align:center}
+.tier-emoji{font-size:28px;margin-bottom:10px}
+.tier-name{font-size:15px;font-weight:700;margin-bottom:4px}
+.tier-ram{font-size:12px;color:var(--muted);margin-bottom:12px}
+.tier-model{font-size:13px;color:var(--accent);font-weight:600}
+@media(max-width:768px){.tiers{grid-template-columns:repeat(2,1fr)}}
 
-/* Terminal */
-.terminal{max-width:700px;margin:60px auto 0;background:#111;border:1px solid var(--border);border-radius:16px;overflow:hidden}
-.terminal-bar{height:36px;background:rgba(255,255,255,.03);display:flex;align-items:center;padding:0 14px;gap:6px;border-bottom:1px solid var(--border)}
-.dot{width:10px;height:10px;border-radius:50%}.dot.r{background:#ff5f57}.dot.y{background:#ffbd2e}.dot.g{background:#28c840}
-.terminal-code{padding:24px;font-family:'SF Mono','JetBrains Mono',monospace;font-size:13px;line-height:2;color:var(--muted)}
-.terminal-code .c{color:var(--accent)}.terminal-code .o{color:#3fb950}.terminal-code .d{color:var(--dim)}
+/* FEATURES LIST */
+.features-list{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:48px}
+.feature-item{display:flex;align-items:flex-start;gap:12px;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:12px}
+.feature-item .fi{font-size:20px;flex-shrink:0}
+.feature-item h4{font-size:14px;font-weight:700;margin-bottom:2px}
+.feature-item p{font-size:13px;color:var(--muted)}
+@media(max-width:680px){.features-list{grid-template-columns:1fr}}
 
-/* Tiers */
-.tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px}
-.tier-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px;text-align:center;transition:all .3s}
-.tier-card:hover{border-color:var(--border-hover);transform:translateY(-2px)}
-.tier-icon{font-size:40px;margin-bottom:12px}
-.tier-card h3{font-size:16px;font-weight:700;margin-bottom:4px}
-.tier-mem{color:var(--accent);font-family:monospace;font-size:13px;margin-bottom:8px}
-.tier-card p{font-size:13px;color:var(--muted);line-height:1.5}
-
-/* Sister Products */
-.sister{margin-top:80px;padding:48px;background:var(--card);border:1px solid var(--border);border-radius:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
-.sister-info{padding-right:24px}
-.sister-info h3{font-size:20px;font-weight:700;margin-bottom:8px}
-.sister-info p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px}
-.sister-products{display:flex;flex-direction:column;gap:16px}
-.sister-product{display:flex;gap:16px;align-items:center;padding:20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;transition:all .2s}
-.sister-product:hover{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
-.sister-product-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-.sister-product h4{font-size:15px;font-weight:600;margin-bottom:2px}
-.sister-product p{font-size:12px;color:var(--muted)}
+/* DETAIL PAGES LINKS */
+.detail-links{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:48px}
+.detail-card{display:block;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 32px;transition:all .2s}
+.detail-card:hover{border-color:var(--accent);transform:translateY(-2px);opacity:1}
+.detail-card-icon{font-size:28px;margin-bottom:12px}
+.detail-card h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px}
+.detail-card p{font-size:13px;color:var(--muted);line-height:1.6}
+.detail-card .arrow{font-size:13px;color:var(--accent);margin-top:12px;display:block}
+@media(max-width:680px){.detail-links{grid-template-columns:1fr}}
 
 /* CTA */
-.cta{text-align:center;padding:120px 0}
-.cta h2{font-size:40px;font-weight:800;letter-spacing:-1.5px;margin-bottom:16px}
-.cta p{color:var(--muted);max-width:500px;margin:0 auto 40px;font-size:17px}
+.cta{text-align:center;padding:100px 24px;background:linear-gradient(180deg,var(--bg) 0%,rgba(88,166,255,.04) 50%,var(--bg) 100%)}
+.cta h2{font-size:48px;font-weight:800;letter-spacing:-2px;margin-bottom:16px}
+.cta p{font-size:18px;color:var(--muted);margin-bottom:40px}
 
-/* Footer */
-footer{border-top:1px solid var(--border);padding:40px 0;text-align:center}
-footer p{color:var(--dim);font-size:13px}
-footer a{color:var(--muted)}
-.footer-links{display:flex;gap:24px;justify-content:center;margin-bottom:12px}
-
-@media(max-width:768px){
-  .hero h1{font-size:40px;letter-spacing:-2px}
-  .features-grid,.tier-grid{grid-template-columns:1fr}
-  .sister{grid-template-columns:1fr}
-  .section-heading{font-size:28px}
-}
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:40px 24px;text-align:center;font-size:13px;color:var(--dim)}
+footer a{color:var(--dim);transition:color .2s}
+footer a:hover{color:var(--muted)}
+.footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="nav-logo">🧠 NOU</div>
+  <a class="nav-logo" href="/">NOU</a>
   <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#network">Network</a>
-    <a href="https://app.koe.live" class="sister-link">Koe Voice</a>
-    <a href="#download" class="nav-dl">Download</a>
+    <a href="/start.html">はじめ方</a>
+    <a href="/distributed.html">分散推論</a>
+    <a href="/depin.html">DePIN報酬</a>
+    <a href="/docs.html">使い方</a>
+    <a href="/token.html">トークン</a>
   </div>
-  <button class="hamburger" onclick="this.classList.toggle('active');document.getElementById('mob-menu').classList.toggle('open')">
-    <span></span><span></span><span></span>
-  </button>
+  <a class="btn-dl" href="https://github.com/enablerdao/NOU/releases/latest">
+    ⬇ ダウンロード
+  </a>
 </nav>
-<div class="mobile-menu" id="mob-menu">
-  <a href="#features" onclick="document.getElementById('mob-menu').classList.remove('open')">Features</a>
-  <a href="#network" onclick="document.getElementById('mob-menu').classList.remove('open')">Network</a>
-  <a href="https://app.koe.live">Koe Voice</a>
-  <a href="#download" style="color:var(--accent);font-weight:600">Download NOU</a>
-</div>
 
 <section class="hero">
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    あらゆるコンピューターを AI インフラに · 完全無料
+  </div>
+  <h1>あなたのコンピューターが<br><span>AIサーバーになる</span></h1>
+  <p>クラウドなし。月額なし。<br>Claude Code・Cursor・Aiderをローカルで無制限に動かす。</p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="https://github.com/enablerdao/NOU/releases/latest">
+      ⬇ 無料でダウンロード
+    </a>
+    <a class="btn-secondary" href="/docs.html">
+      📖 使い方を見る
+    </a>
+  </div>
+  <p class="hero-sub">Mac β · Linux α · Windows α · <a href="https://github.com/enablerdao/NOU">オープンソース</a></p>
+
+  <div class="mockup">
+    <div class="mockup-bar">
+      <div class="mockup-dot" style="background:#ff5f57"></div>
+      <div class="mockup-dot" style="background:#febc2e"></div>
+      <div class="mockup-dot" style="background:#28c840"></div>
+      <span style="margin-left:8px;font-size:12px;color:#8b949e">NOU — ローカルAI</span>
+    </div>
+    <div class="mockup-body">
+      <div><span class="g">●</span> <span class="w">Qwen3-32B</span> <span class="b">動作中</span></div>
+      <div><span class="p">→</span> Claude Code に接続済み</div>
+      <div>─────────────────</div>
+      <div><span class="g">本日の処理</span>: 1,247 リクエスト</div>
+      <div><span class="g">獲得報酬</span>: 0.034 NCH</div>
+      <div><span class="b">接続ノード</span>: 2台 (分散推論中)</div>
+      <div>─────────────────</div>
+      <div style="color:#3fb950">✓ API料金: ¥0</div>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section class="section">
   <div class="container">
-    <div class="hero-mesh">
-      <div class="mesh-node"></div>
-      <div class="mesh-line"></div>
-      <div class="mesh-node"></div>
-      <div class="mesh-line"></div>
-      <div class="mesh-node"></div>
-      <div class="mesh-line"></div>
-      <div class="mesh-node"></div>
-      <div class="mesh-line"></div>
-      <div class="mesh-node"></div>
-    </div>
-    <h1>Claude Code.<br><span class="gradient">No API key.</span></h1>
-    <p class="subtitle">Run Claude Code and Aider with a 122B model running entirely on your Mac. No OpenAI bill, no cloud, no data leaving your device. Install and go.</p>
-    <div class="hero-ctas">
-      <a href="#download" class="btn-primary"><svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83"/><path d="M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/></svg> Download for Mac</a>
-      <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg" class="btn-secondary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg> Source Code</a>
-    </div>
-    <p class="hero-meta">macOS 14+ Sonoma &middot; Apple Silicon &middot; Free &amp; open source</p>
-    <div class="hero-badges">
-      <span class="badge">🔒 100% Local</span>
-      <span class="badge">⚡ 42+ tok/s</span>
-      <span class="badge">🧠 Up to 122B params</span>
-      <span class="badge">🌐 P2P Mesh</span>
-    </div>
-  </div>
-</section>
-
-<section id="features" class="fade-in">
-  <div class="container section-center">
-    <div class="section-label">Features</div>
-    <div class="section-heading">Everything runs on your Mac</div>
-    <p class="section-desc">No API keys, no cloud bills, no data leaving your device. Just your hardware doing what it was designed for.</p>
-    <div class="features-grid">
-      <div class="feat-card">
-        <div class="feat-card-icon">🔒</div>
-        <h3>Zero Cloud</h3>
-        <p>Your prompts, your data, your models. Nothing ever touches a server. No accounts, no telemetry, no tracking.</p>
+    <div class="section-label">なぜNOU？</div>
+    <div class="section-title">ローカルAIの<br>決定版</div>
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-icon">🔒</div>
+        <h3>完全プライベート</h3>
+        <p>コードも会話もすべて手元のMacで処理。クラウドに一切送信しない。機密プロジェクトも安心。</p>
       </div>
-      <div class="feat-card">
-        <div class="feat-card-icon">⚡</div>
-        <h3>MLX + llama.cpp</h3>
-        <p>Auto-benchmarks both runtimes and picks the fastest for your hardware. M5 Max hits 42 tok/s on 122B MoE.</p>
+      <div class="benefit">
+        <div class="benefit-icon">💰</div>
+        <h3>API料金ゼロ</h3>
+        <p>Claude Codeを1日100回使っても¥0。月額サブスクも不要。一度セットアップすれば永続的に無料。</p>
       </div>
-      <div class="feat-card">
-        <div class="feat-card-icon">🌐</div>
-        <h3>Distributed Mesh</h3>
-        <p>Bonjour auto-discovery connects your Macs. The big GPU becomes the brain, laptops become relays. Zero config.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-card-icon">🛠</div>
-        <h3>OpenAI-Compatible</h3>
-        <p>Drop-in replacement API on localhost:4001. Works with Claude Code, Aider, Cursor, Continue, and any OpenAI client.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-card-icon">🧠</div>
-        <h3>Smart Router</h3>
-        <p>Routes simple prompts to the fast 35B model, complex ones to the 122B. You just use "auto" as the model name.</p>
-      </div>
-      <div class="feat-card">
-        <div class="feat-card-icon">📱</div>
-        <h3>iOS Remote</h3>
-        <p>QR-code pairing. Use your Mac's GPU from your iPhone. Voice input, chat UI, all powered by your own hardware.</p>
+      <div class="benefit">
+        <div class="benefit-icon">⚡️</div>
+        <h3>あらゆるハードウェアを活用</h3>
+        <p>Mac (Apple Silicon) はもちろん、Linux サーバーや GPU マシンも将来対応予定。あなたの手元の計算資源がそのままAIインフラに。</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="fade-in">
-  <div class="container section-center">
-    <div class="section-label">Developer Experience</div>
-    <div class="section-heading">Two lines to get started</div>
-    <p class="section-desc">Point any OpenAI-compatible tool at localhost:4001 and start coding.</p>
-    <div class="terminal">
-      <div class="terminal-bar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-      <div class="terminal-code">
-<span class="d"># 1. Set two env vars</span>
-<span class="c">export</span> ANTHROPIC_BASE_URL=http://localhost:4001
-<span class="c">export</span> ANTHROPIC_API_KEY=sk-local
-
-<span class="d"># 2. Use Claude Code as usual</span>
-<span class="c">claude</span>
-<span class="o">✓ Connected to NOU (🌲 Root, 128GB)</span>
-<span class="o">✓ Qwen3.5-122B-A10B via MLX — 42 tok/s</span>
-
-<span class="d"># Works with Aider too</span>
-<span class="c">OPENAI_API_BASE</span>=http://localhost:4001/v1 <span class="c">aider</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section id="network" class="fade-in">
-  <div class="container section-center">
-    <div class="section-label">Network</div>
-    <div class="section-heading">Every Mac has a role</div>
-    <p class="section-desc">NOU auto-detects your hardware tier and configures itself. Install on all your Macs — they find each other.</p>
-    <div class="tier-grid">
-      <div class="tier-card">
-        <div class="tier-icon">🌱</div>
-        <h3>Seed</h3>
-        <div class="tier-mem">&le; 8 GB</div>
-        <p>iPhone, iPad. Relays to your Mac via local network.</p>
-      </div>
-      <div class="tier-card">
-        <div class="tier-icon">🌿</div>
-        <h3>Branch</h3>
-        <div class="tier-mem">&le; 24 GB</div>
-        <p>MacBook Air. Runs small models, relays heavy work.</p>
-      </div>
-      <div class="tier-card">
-        <div class="tier-icon">🌳</div>
-        <h3>Trunk</h3>
-        <div class="tier-mem">&le; 96 GB</div>
-        <p>MacBook Pro, Mac Mini. Full server with mid-size models.</p>
-      </div>
-      <div class="tier-card">
-        <div class="tier-icon">🌲</div>
-        <h3>Root</h3>
-        <div class="tier-mem">&gt; 96 GB</div>
-        <p>Mac Studio, Mac Pro. 122B at 40+ tok/s. The brain.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Sister Products -->
-<section class="fade-in">
+<!-- PLATFORM -->
+<section class="section" style="padding-top:0">
   <div class="container">
-    <div class="sister">
-      <div class="sister-info">
-        <div class="section-label">Enabler Ecosystem</div>
-        <h3>Local AI, your way</h3>
-        <p>NOU and Koe are part of the Enabler family. Both run 100% locally, respect your privacy, and are free and open source. Use them together for a complete local AI experience.</p>
-        <a href="https://enablerdao.com" style="font-size:13px;color:var(--muted)">More from EnablerDAO →</a>
+    <div class="section-label">対応プラットフォーム</div>
+    <div class="section-title">どのコンピューターでも<br>AIインフラになる</div>
+    <p class="section-sub">Mac でベータ公開中。Linux・Windows はアルファ版をリリース。</p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:32px">
+      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(96,165,250,.4);border-radius:12px">
+        <div style="font-size:24px;margin-bottom:8px">🍎</div>
+        <div style="font-weight:700;color:#fff;margin-bottom:8px">Mac (Apple Silicon)</div>
+        <div style="font-size:12px;color:#60a5fa;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">β ベータ版</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">M1〜M5。macOS 14 Sonoma 以降。<br><a href="https://github.com/enablerdao/NOU/releases/latest" style="color:#60a5fa">ダウンロード →</a></p>
       </div>
-      <div class="sister-products">
-        <a href="https://nou.link" class="sister-product" style="color:var(--text)">
-          <div class="sister-product-icon" style="background:var(--grad-subtle)">🧠</div>
-          <div>
-            <h4>NOU</h4>
-            <p>Private LLM inference on Apple Silicon. Distributed AI mesh for your Macs.</p>
-          </div>
-        </a>
-        <a href="https://app.koe.live" class="sister-product" style="color:var(--text)">
-          <div class="sister-product-icon" style="background:linear-gradient(135deg,rgba(255,59,48,.12),rgba(255,149,0,.08))">🎤</div>
-          <div>
-            <h4>Koe</h4>
-            <p>Voice-powered Mac AI agent. Sees your screen, acts on commands. 100% local.</p>
-          </div>
-        </a>
-        <a href="https://koe.live" class="sister-product" style="color:var(--text)">
-          <div class="sister-product-icon" style="background:linear-gradient(135deg,rgba(74,222,128,.12),rgba(52,199,89,.08))">🪨</div>
-          <div>
-            <h4>Koe Device</h4>
-            <p>5-gram AI pebble with ESP32-S3. Always listening, always learning. Open hardware.</p>
-          </div>
-        </a>
+      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(251,191,36,.3);border-radius:12px">
+        <div style="font-size:24px;margin-bottom:8px">🐧</div>
+        <div style="font-weight:700;color:#fff;margin-bottom:8px">Linux サーバー / GPU</div>
+        <div style="font-size:12px;color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">α アルファ版</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">Ubuntu / Debian。x86_64 / arm64。</p>
+        <div style="margin-top:10px;background:#010409;border-radius:6px;padding:8px 10px;font-size:11px;font-family:monospace;color:#e6edf3">
+          curl -sSL https://github.com/yukihamada/NOU/releases/latest/download/install.sh | sudo bash
+        </div>
+        <a href="https://github.com/yukihamada/NOU/releases/latest" style="color:#fbbf24;font-size:12px;display:block;margin-top:8px">バイナリをダウンロード →</a>
+      </div>
+      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(251,191,36,.3);border-radius:12px">
+        <div style="font-size:24px;margin-bottom:8px">🪟</div>
+        <div style="font-weight:700;color:#fff;margin-bottom:8px">Windows</div>
+        <div style="font-size:12px;color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">α アルファ版</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">Windows 11。RTX シリーズ対応。</p>
+        <div style="margin-top:10px;background:#010409;border-radius:6px;padding:8px 10px;font-size:11px;font-family:monospace;color:#e6edf3">
+          irm https://github.com/yukihamada/NOU/releases/latest/download/install.ps1 | iex
+        </div>
+        <a href="https://github.com/yukihamada/NOU/releases/latest" style="color:#fbbf24;font-size:12px;display:block;margin-top:8px">exe をダウンロード →</a>
       </div>
     </div>
   </div>
 </section>
 
-<section id="download" class="cta fade-in">
+<!-- TIER -->
+<section class="section" style="padding-top:0">
   <div class="container">
-    <h2>Get NOU</h2>
-    <p>Free, open-source, yours forever. Drop into /Applications and go.</p>
-    <div class="hero-ctas">
-      <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg" class="btn-primary"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83"/><path d="M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/></svg> Download NOU.app</a>
-      <a href="https://app.koe.live" class="btn-secondary">🎤 Get Koe Voice</a>
+    <div class="section-label">あなたのMacは？</div>
+    <div class="section-title">RAMで決まる<br>動かせるモデル</div>
+    <p class="section-sub">MacのRAMが多いほど、より大きくて賢いモデルが動かせます。</p>
+    <div class="tiers">
+      <div class="tier">
+        <div class="tier-emoji">🌱</div>
+        <div class="tier-name">Seed</div>
+        <div class="tier-ram">16GB RAM</div>
+        <div class="tier-model">Qwen3-8B / Gemma 3 4B</div>
+      </div>
+      <div class="tier">
+        <div class="tier-emoji">🌿</div>
+        <div class="tier-name">Branch</div>
+        <div class="tier-ram">32GB RAM</div>
+        <div class="tier-model">Qwen3-32B / DeepSeek-R1 14B</div>
+      </div>
+      <div class="tier">
+        <div class="tier-emoji">🌳</div>
+        <div class="tier-name">Trunk</div>
+        <div class="tier-ram">64GB RAM</div>
+        <div class="tier-model">Qwen3-72B / Gemma 4 31B / Llama 4 Scout</div>
+      </div>
+      <div class="tier">
+        <div class="tier-emoji">🌲</div>
+        <div class="tier-name">Root</div>
+        <div class="tier-ram">128GB+ RAM</div>
+        <div class="tier-model">Qwen3-235B MoE / MiniMax-Text-01</div>
+      </div>
     </div>
-    <p class="hero-meta" style="margin-top:24px">Also available: <a href="https://github.com/yukihamada/Koe-swift/releases/latest" style="color:var(--muted)">Koe v2.9.0</a></p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-label">主な機能</div>
+    <div class="section-title">開発者が<br>欲しかったもの</div>
+    <div class="features-list">
+      <div class="feature-item">
+        <div class="fi">🖥️</div>
+        <div>
+          <h4>Claude Code / Cursor 対応</h4>
+          <p>OPENAI_API_BASE を localhost:4001 に向けるだけ。既存ツールがそのまま動く。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">🔗</div>
+        <div>
+          <h4>複数Macで分散推論</h4>
+          <p>家やオフィスの複数台を束ねて巨大モデルを動かす。1台では無理な122Bも可能。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">🪙</div>
+        <div>
+          <h4>GPU公開で報酬獲得</h4>
+          <p>使っていないMacをDePINネットワークに開放。NCH（報酬クレジット）を自動で積み立て。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">📱</div>
+        <div>
+          <h4>iPhoneからも接続</h4>
+          <p>NOUConnect iOSアプリでLAN内のNOUノードに自動接続。外出先でも使える。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">⌨️</div>
+        <div>
+          <h4>クイックAI (⌘⇧N)</h4>
+          <p>どのアプリからでも即起動するフローティングAIパネル。コンテキストを保持して会話継続。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">🎛️</div>
+        <div>
+          <h4>メニューバーから1クリック</h4>
+          <p>モデルの起動・停止、ノード接続、報酬確認がメニューバーから完結。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">⚡️</div>
+        <div>
+          <h4>投機的デコード（自動ON）</h4>
+          <p>ドラフトモデルによる先読み検証で推論速度を2〜4倍高速化。設定不要、自動で動きます。</p>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="fi">🤖</div>
+        <div>
+          <h4>エージェントモード対応</h4>
+          <p>Tool use / Function callingに完全対応。Claude CodeやCursorのエージェント機能をローカルで実行。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DETAIL LINKS -->
+<section class="section" style="padding-top:0">
+  <div class="container">
+    <div class="section-label">もっと詳しく</div>
+    <div class="section-title">気になる機能を<br>深掘りする</div>
+    <div class="detail-links">
+      <a class="detail-card" href="/distributed.html">
+        <div class="detail-card-icon">🔗</div>
+        <h3>分散推論とは？</h3>
+        <p>複数のMacをつなげて1台では動かせないモデルを動かす仕組みを図解で解説。</p>
+        <span class="arrow">詳細を見る →</span>
+      </a>
+      <a class="detail-card" href="/depin.html">
+        <div class="detail-card-icon">🪙</div>
+        <h3>DePIN報酬の仕組み</h3>
+        <p>GPUを提供してNCH（NOU Compute Hours）を獲得する仕組みと日本での法的整理。</p>
+        <span class="arrow">詳細を見る →</span>
+      </a>
+      <a class="detail-card" href="/docs.html">
+        <div class="detail-card-icon">📖</div>
+        <h3>インストール・使い方</h3>
+        <p>ダウンロードから最初のAI起動まで5分で完了。Claude Code連携手順も掲載。</p>
+        <span class="arrow">使い方を見る →</span>
+      </a>
+      <a class="detail-card" href="/token.html">
+        <div class="detail-card-icon">💎</div>
+        <h3>NCH / NOUトークン設計</h3>
+        <p>日本法に準拠したバーター型クレジットの設計思想と将来のSOLANA決済ロードマップ。</p>
+        <span class="arrow">設計を見る →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2>今すぐ始める</h2>
+    <p>ダウンロードして起動するだけ。設定は3分以内。</p>
+    <a class="btn-primary" href="https://github.com/enablerdao/NOU/releases/latest" style="margin:0 auto;display:inline-flex">
+      ⬇ 無料でダウンロード
+    </a>
+    <p style="margin-top:20px;font-size:13px;color:var(--dim)">Mac β · Linux α · Windows α · MIT License</p>
   </div>
 </section>
 
 <footer>
   <div class="container">
     <div class="footer-links">
+      <a href="/start.html">はじめ方</a>
+      <a href="/distributed.html">分散推論</a>
+      <a href="/depin.html">DePIN報酬</a>
+      <a href="/docs.html">使い方</a>
+      <a href="/token.html">トークン設計</a>
+      <a href="https://github.com/enablerdao/NOU">GitHub</a>
       <a href="https://enablerdao.com">EnablerDAO</a>
-      <a href="https://app.koe.live">Koe Voice</a>
-      <a href="https://koe.live">Koe Device</a>
-      <a href="https://chatweb.ai">ChatWeb</a>
-      <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg">GitHub</a>
     </div>
-    <p>NOU &middot; Made by <a href="https://enablerdao.com">EnablerDAO</a> &middot; Open source under MIT</p>
+    <p>© 2025 EnablerDAO · NOU はオープンソースソフトウェアです (MIT License)</p>
   </div>
 </footer>
 
-<script>
-// Scroll fade-in (same as Koe)
-const obs = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
-}, { threshold: 0.1 });
-document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
-</script>
 </body>
 </html>

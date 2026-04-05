@@ -14,7 +14,10 @@ actor RequestStats {
 
     func record(isExternal: Bool, outputTokens: Int, elapsed: TimeInterval) {
         totalRequests += 1
-        if isExternal { depinRequests += 1 }
+        if isExternal {
+            depinRequests += 1
+            Task { await RewardLedger.shared.credit(outputTokens: outputTokens) }
+        }
         totalTokensOut += outputTokens
         if elapsed > 0, outputTokens > 0 {
             let tps = Double(outputTokens) / elapsed

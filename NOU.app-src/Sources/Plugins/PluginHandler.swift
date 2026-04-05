@@ -11,8 +11,9 @@ struct PluginHandler {
                         body: .init(byteBuffer: .init(data: data)))
     }
 
-    /// POST /api/plugins/{name}/toggle — enable/disable a plugin
+    /// POST /api/plugins/{name}/toggle — enable/disable a plugin (LOCAL ONLY)
     static func handleToggle(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireLocal(request: request) { return deny }
         let name = context.parameters.get("name") ?? ""
         guard !name.isEmpty else {
             return Response(status: .badRequest, headers: [.contentType: "application/json"],

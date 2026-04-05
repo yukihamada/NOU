@@ -165,6 +165,7 @@ struct ProxyHandler {
 
     // MARK: - POST /v1/messages/count_tokens
     static func handleCountTokens(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireAuth(request: request) { return deny }
         let buf = try await request.body.collect(upTo: 10_000_000)
         guard let data = buf.getData(at: 0, length: buf.readableBytes),
               let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {

@@ -50,7 +50,7 @@ final class PluginManager: @unchecked Sendable {
                 "required": ["language", "code"]
             ] as [String: Any],
             execute: { args in await CodeExecutionPlugin.execute(args) },
-            enabled: true
+            enabled: false  // SECURITY: disabled by default — arbitrary code execution risk
         )
 
         _plugins["generate_image"] = ToolPlugin(

@@ -1,0 +1,39 @@
+# fly.toml app configuration file generated for nou-relay on 2026-04-05T11:17:41+09:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'nou-relay'
+primary_region = 'nrt'
+
+[build]
+
+[env]
+  NOU_RELAY_URL = "https://nou-relay.fly.dev"
+  RUST_LOG = "info"
+  DB_PATH = "/data/secrets.db"
+
+[mounts]
+  source = "nou_relay_data"
+  destination = "/data"
+  processes = ["app"]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[[http_service.checks]]
+  grace_period = "5s"
+  interval = "15s"
+  method = "get"
+  path = "/health"
+  timeout = "5s"
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1

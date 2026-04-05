@@ -3,7 +3,17 @@ import Hummingbird
 
 actor ProxyServer {
     func start() async {
-        let router = Router()
+        // Migrate relay secret from UserDefaults to Keychain (one-time, v2.1→v2.2)
+        let legacyKey = "nou.relay.secret"
+        if let oldSecret = UserDefaults.standard.string(forKey: legacyKey), !oldSecret.isEmpty {
+            if KeychainHelper.get(key: "secret") == nil {
+                KeychainHelper.set(key: "secret", value: oldSecret)
+            }
+            UserDefaults.standard.removeObject(forKey: legacyKey)
+        }
+
+        let router = Router(context: NOURequestContext.self)
+        router.add(middleware: RemoteIPMiddleware())
         // Health
         router.get("/health", use: HealthHandler.handle)
         // Anthropic API
@@ -28,15 +38,21 @@ actor ProxyServer {
         router.get("/api/models/download/{filename}", use: ModelTransferHandler.handleDownload)
         router.get("/api/models/download-mlx/{name}", use: ModelTransferHandler.handleDownloadMLX)
         // Distributed inference (RPC) API
-        router.get("/api/rpc/status", use: RPCHandler.handleStatus)
+        router.get("/api/rpc/status", use: RPCHandler.handleStatusV2)
         router.post("/api/rpc/start", use: RPCHandler.handleStartRPC)
         router.post("/api/rpc/stop", use: RPCHandler.handleStopRPC)
         router.post("/api/rpc/workers", use: RPCHandler.handleAddWorker)
         router.delete("/api/rpc/workers", use: RPCHandler.handleRemoveWorker)
         router.post("/api/rpc/refresh", use: RPCHandler.handleRefresh)
         router.post("/api/rpc/enable", use: RPCHandler.handleEnable)
-        // Tunnel status API
+        router.post("/api/rpc/speculative", use: RPCHandler.handleSpeculative)
+        // Tunnel status API (legacy)
         router.get("/api/tunnel/status", use: TunnelStatusHandler.handle)
+        // Relay status API
+        router.get("/api/relay/status", use: RelayStatusHandler.handle)
+        router.post("/api/relay/connect", use: RelayStatusHandler.handleConnect)
+        router.post("/api/relay/disconnect", use: RelayStatusHandler.handleDisconnect)
+        router.post("/api/relay/auto-connect", use: RelayStatusHandler.handleAutoConnect)
         // Plugin API
         router.get("/api/plugins", use: PluginHandler.handleList)
         router.post("/api/plugins/{name}/toggle", use: PluginHandler.handleToggle)
@@ -45,6 +61,19 @@ actor ProxyServer {
         router.post("/api/pair/request", use: PairingHandler.handleRequest)
         router.post("/api/pair/confirm", use: PairingHandler.handleConfirm)
         router.delete("/api/pair/{nodeID}", use: PairingHandler.handleUnpair)
+        // Metrics (VRAM / memory / CPU)
+        router.get("/api/metrics", use: MetricsHandler.handle)
+        // Rewards (DePIN compute units / NCH)
+        router.get("/api/rewards", use: RewardHandler.handle)
+        router.post("/api/rewards/wallet", use: RewardHandler.handleSetWallet)
+        router.post("/api/rewards/mode", use: RewardHandler.handleSetMode)
+        // Blackboard (agent knowledge sharing)
+        router.get("/api/blackboard", use: BlackboardHandler.handleList)
+        router.get("/api/blackboard/export", use: BlackboardHandler.handleExport)
+        router.post("/api/blackboard/sync", use: BlackboardHandler.handleSync)
+        router.get("/api/blackboard/{key}", use: BlackboardHandler.handleGet)
+        router.post("/api/blackboard/{key}", use: BlackboardHandler.handleSet)
+        router.delete("/api/blackboard/{key}", use: BlackboardHandler.handleDelete)
 
         let app = Application(
             router: router,

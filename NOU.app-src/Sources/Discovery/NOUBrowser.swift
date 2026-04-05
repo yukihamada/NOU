@@ -197,7 +197,8 @@ final class NOUBrowser: ObservableObject {
     }
 
     private func syncToStore() {
-        let snapshot: [[String: Any]] = nodes.filter { !$0.isLocal }.map { node in
+        let remoteNodes = nodes.filter { !$0.isLocal }
+        let snapshot: [[String: Any]] = remoteNodes.map { node in
             var dict: [String: Any] = [
                 "name": node.name,
                 "url": node.url,
@@ -215,6 +216,11 @@ final class NOUBrowser: ObservableObject {
             return dict
         }
         Task { await DiscoveredNodeStore.shared.update(snapshot) }
+
+        // Auto RPC worker sync: when distributed mode is on, auto-register
+        // paired+healthy+rpc-capable remote nodes as llama.cpp RPC workers.
+        let rpcCandidates = remoteNodes
+        Task { await DistributedInference.shared.syncWorkersFromNodes(rpcCandidates) }
     }
 
     // MARK: - Helpers

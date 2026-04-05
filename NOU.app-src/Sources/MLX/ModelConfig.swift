@@ -26,25 +26,44 @@ enum ModelRegistry {
     // MARK: - Preset Catalog
 
     static let presets: [ModelPreset] = [
-        // Main (高品質)
-        ModelPreset(id: "qwen122b",   displayName: "Qwen3.5-122B (高品質)",  mlxModelID: "mlx-community/Qwen3.5-122B-A10B-4bit",        ramGB: 60, slot: "main"),
-        ModelPreset(id: "deepseekv4", displayName: "DeepSeek-V4 (最高品質)", mlxModelID: "mlx-community/DeepSeek-V4-4bit",               ramGB: 80, slot: "main"),
-        ModelPreset(id: "qwen14b",    displayName: "Qwen3-14B (中品質)",     mlxModelID: "mlx-community/Qwen3-14B-4bit",                 ramGB: 9,  slot: "main"),
-        ModelPreset(id: "gemma4-31b", displayName: "Gemma 4 31B (最新)",    mlxModelID: "mlx-community/gemma-4-31b-it-4bit",            ramGB: 20, slot: "main"),
-        ModelPreset(id: "gemma4-26b", displayName: "Gemma 4 26B-A4B (MoE)", mlxModelID: "mlx-community/gemma-4-26b-a4b-it-4bit",        ramGB: 10, slot: "fast"),
-        // Fast (高速)
-        ModelPreset(id: "qwen35b",    displayName: "Qwen3.5-35B (高速)",     mlxModelID: "mlx-community/Qwen3.5-35B-A3B-4bit",           ramGB: 8,  slot: "fast"),
-        ModelPreset(id: "qwen9b",     displayName: "Qwen3.5-9B (軽量)",      mlxModelID: "mlx-community/Qwen3.5-9B-4bit",                ramGB: 5,  slot: "fast"),
-        ModelPreset(id: "qwen4b",     displayName: "Qwen3.5-4B (超軽量)",    mlxModelID: "mlx-community/Qwen3.5-4B-4bit",                ramGB: 3,  slot: "fast"),
-        // Vision
-        ModelPreset(id: "vl8b",       displayName: "Qwen3-VL-8B (ビジョン)", mlxModelID: "mlx-community/Qwen3-VL-8B-Instruct-4bit",      ramGB: 5,  slot: "vision"),
-        ModelPreset(id: "vl4b",       displayName: "Qwen3-VL-4B (軽量VL)",   mlxModelID: "mlx-community/Qwen3-VL-4B-Instruct-4bit",      ramGB: 3,  slot: "vision"),
+        // ─── Main slot (高品質・コーディング) ───
+        // Qwen3 (Alibaba, 2025)
+        ModelPreset(id: "qwen3-235b", displayName: "Qwen3-235B-A22B MoE ★",  mlxModelID: "mlx-community/Qwen3-235B-A22B-4bit",           ramGB: 130, slot: "main"),
+        ModelPreset(id: "qwen3-32b",  displayName: "Qwen3-32B",               mlxModelID: "mlx-community/Qwen3-32B-4bit",                 ramGB: 20,  slot: "main"),
+        ModelPreset(id: "qwen3-14b",  displayName: "Qwen3-14B",               mlxModelID: "mlx-community/Qwen3-14B-4bit",                 ramGB: 9,   slot: "main"),
+        // Gemma 4 (Google, 2025)
+        ModelPreset(id: "gemma4-31b", displayName: "Gemma 4 31B",             mlxModelID: "mlx-community/gemma-4-31b-it-4bit",            ramGB: 20,  slot: "main"),
+        // Gemma 3 (Google, 2025)
+        ModelPreset(id: "gemma3-27b", displayName: "Gemma 3 27B",             mlxModelID: "mlx-community/gemma-3-27b-it-4bit",            ramGB: 18,  slot: "main"),
+        // DeepSeek-R1 distilled (DeepSeek, 2025) — reasoning specialist
+        ModelPreset(id: "ds-r1-32b",  displayName: "DeepSeek-R1 32B (推論)",  mlxModelID: "mlx-community/DeepSeek-R1-Distill-Qwen-32B-4bit", ramGB: 20, slot: "main"),
+        ModelPreset(id: "ds-r1-14b",  displayName: "DeepSeek-R1 14B (推論)",  mlxModelID: "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit", ramGB: 9,  slot: "main"),
+        // Llama 4 Scout (Meta, 2025) — MoE, efficient
+        ModelPreset(id: "llama4-s",   displayName: "Llama 4 Scout 17B MoE",   mlxModelID: "mlx-community/Llama-4-Scout-17B-16E-Instruct-4bit", ramGB: 12, slot: "main"),
+        // Mistral (2025)
+        ModelPreset(id: "mistral-24b", displayName: "Mistral Small 3.1 24B",  mlxModelID: "mlx-community/Mistral-Small-3.1-24B-Instruct-2503-4bit", ramGB: 15, slot: "main"),
+        // MiniMax-Text-01 (MiniMax, 2025) — 456B MoE, 45.9B active
+        ModelPreset(id: "minimax-01", displayName: "MiniMax-Text-01 MoE",     mlxModelID: "mlx-community/MiniMax-Text-01-4bit",           ramGB: 28,  slot: "main"),
+
+        // ─── Fast slot (高速・軽量) ───
+        ModelPreset(id: "qwen3-8b",   displayName: "Qwen3-8B (推奨・高速)",   mlxModelID: "mlx-community/Qwen3-8B-4bit",                  ramGB: 5,   slot: "fast"),
+        ModelPreset(id: "qwen3-30b-moe", displayName: "Qwen3-30B-A3B MoE",   mlxModelID: "mlx-community/Qwen3-30B-A3B-4bit",             ramGB: 8,   slot: "fast"),
+        ModelPreset(id: "gemma4-12b", displayName: "Gemma 4 12B",             mlxModelID: "mlx-community/gemma-4-12b-it-4bit",            ramGB: 8,   slot: "fast"),
+        ModelPreset(id: "gemma3-12b", displayName: "Gemma 3 12B",             mlxModelID: "mlx-community/gemma-3-12b-it-4bit",            ramGB: 8,   slot: "fast"),
+        ModelPreset(id: "qwen3-4b",   displayName: "Qwen3-4B (超軽量)",       mlxModelID: "mlx-community/Qwen3-4B-4bit",                  ramGB: 3,   slot: "fast"),
+        ModelPreset(id: "gemma3-4b",  displayName: "Gemma 3 4B (超軽量)",     mlxModelID: "mlx-community/gemma-3-4b-it-4bit",             ramGB: 3,   slot: "fast"),
+        ModelPreset(id: "ds-r1-7b",   displayName: "DeepSeek-R1 7B (推論)",   mlxModelID: "mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit", ramGB: 5,  slot: "fast"),
+
+        // ─── Vision slot ───
+        ModelPreset(id: "gemma4-4b-vl", displayName: "Gemma 4 4B Vision",    mlxModelID: "mlx-community/gemma-4-4b-it-4bit",             ramGB: 3,   slot: "vision"),
+        ModelPreset(id: "qwen3-vl-8b",  displayName: "Qwen3-VL-8B Vision",   mlxModelID: "mlx-community/Qwen3-VL-8B-Instruct-4bit",      ramGB: 5,   slot: "vision"),
+        ModelPreset(id: "qwen3-vl-4b",  displayName: "Qwen3-VL-4B Vision",   mlxModelID: "mlx-community/Qwen3-VL-4B-Instruct-4bit",      ramGB: 3,   slot: "vision"),
     ]
 
     // MARK: - Active Model Selection (UserDefaults)
 
     static func activeModelID(slot: String) -> String {
-        let defaults = ["main": "qwen122b", "fast": "qwen35b", "vision": "vl8b"]
+        let defaults = ["main": "qwen3-32b", "fast": "qwen3-8b", "vision": "qwen3-vl-8b"]
         return UserDefaults.standard.string(forKey: "nou.model.\(slot)") ?? defaults[slot] ?? "qwen122b"
     }
 
@@ -135,20 +154,29 @@ enum ModelRegistry {
 
     static let openaiPrefixes: [(String, String)] = [
         ("nou-agent", "main"),  // Agent mode with tool-use loop
-        ("agent", "main"),      // Agent mode alias
-        ("nou", "main"),    // overridden by SmartRouter
-        ("auto", "main"),   // overridden by SmartRouter
-        ("smart", "main"),  // overridden by SmartRouter
-        ("gemma-4-31b", "main"),
-        ("gemma-4", "fast"),
-        ("gemma4", "fast"),
-        ("deepseek", "main"),
-        ("qwen3.5-122b", "main"),
-        ("qwen3.5-35b", "fast"),
-        ("qwen3-vl-8b", "vision"),
-        ("gpt-4o-mini", "fast"),
-        ("gpt-4", "main"),
-        ("gpt-3.5", "fast"),
+        ("agent", "main"),
+        ("nou", "main"),
+        ("auto", "main"),
+        ("smart", "main"),
+        // Qwen3
+        ("qwen3-235b", "main"), ("qwen3-32b", "main"), ("qwen3-14b", "main"),
+        ("qwen3-30b", "fast"),  ("qwen3-8b", "fast"),  ("qwen3-4b", "fast"),
+        ("qwen3-vl-8b", "vision"), ("qwen3-vl-4b", "vision"),
+        // Gemma
+        ("gemma-4-31b", "main"), ("gemma-4-12b", "fast"), ("gemma-4-4b", "vision"),
+        ("gemma-3-27b", "main"), ("gemma-3-12b", "fast"), ("gemma-3-4b", "fast"),
+        ("gemma4", "main"), ("gemma3", "main"),
+        // DeepSeek
+        ("deepseek-r1-32b", "main"), ("deepseek-r1-14b", "main"), ("deepseek-r1-7b", "fast"),
+        ("deepseek-r1", "main"), ("deepseek", "main"),
+        // Llama 4
+        ("llama-4-scout", "main"), ("llama4", "main"),
+        // Mistral
+        ("mistral-small", "main"), ("mistral", "main"),
+        // MiniMax
+        ("minimax", "main"),
+        // OpenAI compat aliases
+        ("gpt-4o-mini", "fast"), ("gpt-4", "main"), ("gpt-3.5", "fast"),
     ]
 
     static func backend(for anthropicModel: String, hasImages: Bool = false) -> BackendConfig {

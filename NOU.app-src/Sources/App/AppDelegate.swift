@@ -43,6 +43,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TunnelManager.shared.autoStart()
         }
 
+        // Auto-connect DePIN relay if user enabled it
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000) // wait for proxy server
+            if UserDefaults.standard.bool(forKey: "nou.relay.autoConnect") {
+                await RelayClient.shared.connect()
+                print("[NOU] Auto-connected DePIN relay")
+            }
+        }
+
         // Register sleep/wake notifications for recovery
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(handleSleep),
@@ -107,12 +116,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return event
         }
-        // When app is NOT focused (global)
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains([.command, .shift])
-                && event.keyCode == 45 {
-                Task { @MainActor in QuickAIPanel.shared.toggle() }
+        // When app is NOT focused (global) — requires Accessibility permission
+        if AXIsProcessTrusted() {
+            NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+                if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains([.command, .shift])
+                    && event.keyCode == 45 {
+                    Task { @MainActor in QuickAIPanel.shared.toggle() }
+                }
             }
+        } else {
+            // Prompt user for Accessibility permission
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+            print("[NOU] Accessibility permission needed for global hotkey ⌘⇧N")
         }
     }
 

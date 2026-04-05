@@ -58,88 +58,99 @@ class MenubarController {
         let ramGB = Int(ProcessInfo.processInfo.physicalMemory / (1024*1024*1024))
         let localTier = NodeTier.from(memoryGB: ramGB)
 
-        // ── ヘッダー ──────────────────────────────────
-        let header = NSMenuItem(title: "NOU", action: nil, keyEquivalent: "")
+        // ── ① ヘッダー: NOU + ノード情報 ─────────────────
+        let header = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         header.isEnabled = false
-        header.attributedTitle = NSAttributedString(string: "  🧠  NOU  \(localTier.icon) \(localTier.rawValue) (\(ramGB)GB)", attributes: [
-            .foregroundColor: NSColor.labelColor,
-            .font: NSFont.systemFont(ofSize: 13, weight: .bold)
-        ])
+        header.attributedTitle = NSAttributedString(
+            string: "  🧠  NOU  \(localTier.icon) \(localTier.rawValue) (\(ramGB)GB)",
+            attributes: [.foregroundColor: NSColor.labelColor,
+                         .font: NSFont.systemFont(ofSize: 13, weight: .bold)]
+        )
         menu.addItem(header)
 
-        // ステータス行 (●●● 形式で1行にまとめる)
+        // ── ② モデル稼働状態 (1行で全ポート表示) ─────────
         let statusRow = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         statusRow.isEnabled = false; statusRow.tag = 1000
         menu.addItem(statusRow)
 
-        // tok/sec + リクエスト数
+        // ── ③ tok/s + リクエスト数 (推論中のみ表示) ──────
         let statsRow = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         statsRow.isEnabled = false; statsRow.tag = 7777; statsRow.isHidden = true
         menu.addItem(statsRow)
 
         menu.addItem(.separator())
 
-        // ── クイックアクション ─────────────────────────
-        addItem(menu, L("  ▶  AIを起動", "  ▶  Start AI"),   #selector(startAll),   "s")
-        addItem(menu, L("  ■  AIを停止", "  ■  Stop AI"),    #selector(stopAll),    "x")
-        addItem(menu, L("  ↻  再起動",   "  ↻  Restart"),    #selector(restartAll), "r")
-
-        menu.addItem(.separator())
-
-        // ── AI ツール ──────────────────────────────────
-        let quickAIItem = NSMenuItem(title: L("  ⚡  Quick AI", "  ⚡  Quick AI"), action: #selector(openQuickAI), keyEquivalent: "N")
+        // ── ④ よく使うAIツール (最重要アクション) ─────────
+        let quickAIItem = NSMenuItem(
+            title: L("  ⚡  Quick AI", "  ⚡  Quick AI"),
+            action: #selector(openQuickAI), keyEquivalent: "N"
+        )
         quickAIItem.keyEquivalentModifierMask = [.command, .shift]
         quickAIItem.target = self
         menu.addItem(quickAIItem)
-        addItem(menu, L("  💬  Claude Code (ローカル)", "  💬  Claude Code (Local)"), #selector(launchCld),     "c")
-        addItem(menu, L("  🤖  Aider (コード編集)",      "  🤖  Aider (Code Edit)"),   #selector(launchAider),   "a")
-        addItem(menu, L("  🌐  ダッシュボード",           "  🌐  Dashboard"),            #selector(openDashboard), "d")
+
+        addItem(menu, L("  🌐  ダッシュボード", "  🌐  Dashboard"), #selector(openDashboard), "d")
 
         menu.addItem(.separator())
 
-        // ── モデル選択サブメニュー ──────────────────────
+        // ── ⑤ 起動 / 停止 / 再起動 ──────────────────────
+        addItem(menu, L("  ▶  起動", "  ▶  Start"),   #selector(startAll),   "s")
+        addItem(menu, L("  ↻  再起動", "  ↻  Restart"), #selector(restartAll), "r")
+        addItem(menu, L("  ■  停止", "  ■  Stop"),    #selector(stopAll),    "x")
+
+        menu.addItem(.separator())
+
+        // ── ⑥ モデル選択 (現在のモデル名をインラインで表示) ─
         let modelMenu = NSMenu()
         let modelParent = NSMenuItem(title: L("  🧠  モデル", "  🧠  Model"), action: nil, keyEquivalent: "")
-        modelParent.tag = 2000  // モデル名を動的更新
+        modelParent.tag = 2000
         menu.addItem(modelParent)
         menu.setSubmenu(modelMenu, for: modelParent)
         buildModelSubmenu(modelMenu)
 
+        // ── ⑦ ネットワーク (リモートノードを直接表示) ─────
+        buildNetworkSection(menu)
+
         menu.addItem(.separator())
 
-        // ── DePIN サブメニュー ─────────────────────────
-        let depinMenu = NSMenu()
-        let depinParent = NSMenuItem(title: L("  🌍  DePIN", "  🌍  DePIN"), action: nil, keyEquivalent: "")
-        depinParent.tag = 3000
-        menu.addItem(depinParent)
-        menu.setSubmenu(depinMenu, for: depinParent)
-        buildDepinSubmenu(depinMenu)
-
-        // ── 分散推論サブメニュー ───────────────────────
+        // ── ⑧ 詳細サブメニュー (折りたたみ) ───────────────
         let distMenu = NSMenu()
-        let distParent = NSMenuItem(title: L("  ⚡  分散推論", "  ⚡  Distributed"), action: nil, keyEquivalent: "")
+        let distParent = NSMenuItem(
+            title: L("  🖥️  複数Macで動かす", "  🖥️  Multi-Mac (Distributed)"),
+            action: nil, keyEquivalent: ""
+        )
         distParent.tag = 4000
         menu.addItem(distParent)
         menu.setSubmenu(distMenu, for: distParent)
         buildDistributedSubmenu(distMenu)
 
-        // ── 接続サブメニュー ───────────────────────────
+        let depinMenu = NSMenu()
+        let depinParent = NSMenuItem(
+            title: L("  🪙  GPU公開・報酬獲得 (DePIN)", "  🪙  Share GPU & Earn (DePIN)"),
+            action: nil, keyEquivalent: ""
+        )
+        depinParent.tag = 3000
+        menu.addItem(depinParent)
+        menu.setSubmenu(depinMenu, for: depinParent)
+        buildDepinSubmenu(depinMenu)
+
         let connectMenu = NSMenu()
-        let connectParent = NSMenuItem(title: L("  🔗  接続・共有", "  🔗  Connect"), action: nil, keyEquivalent: "")
+        let connectParent = NSMenuItem(
+            title: L("  🔗  ノードのペアリング", "  🔗  Pair Nodes"),
+            action: nil, keyEquivalent: ""
+        )
         menu.addItem(connectParent)
         menu.setSubmenu(connectMenu, for: connectParent)
         buildConnectSubmenu(connectMenu)
 
-        // ── その他サブメニュー ─────────────────────────
-        let moreMenu = NSMenu()
-        let moreParent = NSMenuItem(title: L("  ⋯  その他", "  ⋯  More"), action: nil, keyEquivalent: "")
-        menu.addItem(moreParent)
-        menu.setSubmenu(moreMenu, for: moreParent)
-        buildMoreSubmenu(moreMenu)
-
-        // ── ネットワーク (発見されたリモートノード) ──────
-        menu.addItem(.separator())
-        buildNetworkSection(menu)
+        let settingsMenu = NSMenu()
+        let settingsParent = NSMenuItem(
+            title: L("  ⚙️  設定・ツール", "  ⚙️  Settings & Tools"),
+            action: nil, keyEquivalent: ""
+        )
+        menu.addItem(settingsParent)
+        menu.setSubmenu(settingsMenu, for: settingsParent)
+        buildSettingsSubmenu(settingsMenu)
 
         menu.addItem(.separator())
         addItem(menu, L("NOUを終了", "Quit NOU"), #selector(quit), "q")
@@ -655,11 +666,29 @@ class MenubarController {
 
     private func buildDepinSubmenu(_ menu: NSMenu) {
         menu.autoenablesItems = false
-        addItemTo(menu, L("  🌍  外部公開を開始",  "  🌍  Start Public Node"), #selector(startDepin))
-        addItemTo(menu, L("  🔒  外部公開を停止",  "  🔒  Stop Public Node"),  #selector(stopDepin))
+
+        // What is DePIN — brief explanation
+        addDisabled(menu, L("  MacのGPUを公開→外部のAIリクエストを処理→報酬獲得", "  Share GPU → Process AI requests → Earn rewards"), size: 11)
+
         menu.addItem(.separator())
-        addItemTo(menu, L("  📊  ノード状態を確認", "  📊  Node Status"),       #selector(depinStatus))
-        addItemTo(menu, L("  🔑  接続情報をコピー", "  🔑  Copy Connect Info"), #selector(copyDepinInfo))
+
+        addItemTo(menu, L("  🟢  公開ノードを開始", "  🟢  Start Public Node"), #selector(startDepin))
+        addItemTo(menu, L("  🔴  公開ノードを停止", "  🔴  Stop Public Node"),  #selector(stopDepin))
+
+        menu.addItem(.separator())
+
+        // Reward info row (updated dynamically)
+        let rewardItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        rewardItem.isEnabled = false
+        rewardItem.tag = 3001
+        rewardItem.attributedTitle = NSAttributedString(
+            string: L("  🪙  獲得報酬: 読み込み中...", "  🪙  Earned: loading..."),
+            attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]
+        )
+        menu.addItem(rewardItem)
+
+        addItemTo(menu, L("  📊  ダッシュボードで詳細", "  📊  View in Dashboard"), #selector(openDashboard))
+        addItemTo(menu, L("  🔑  接続URLをコピー", "  🔑  Copy Tunnel URL"), #selector(copyDepinInfo))
     }
 
     private func buildDistributedSubmenu(_ menu: NSMenu) {
@@ -799,18 +828,43 @@ class MenubarController {
         addItemTo(menu, L("  💬  Claude Code (クラウド)", "  💬  Claude Code (Cloud)"), #selector(launchClc))
     }
 
-    private func buildMoreSubmenu(_ menu: NSMenu) {
+    private func buildSettingsSubmenu(_ menu: NSMenu) {
         menu.autoenablesItems = false
-        addItemTo(menu, L("  🖼  画像を生成...",  "  🖼  Generate Image..."), #selector(genImage))
-        addItemTo(menu, L("  🎬  動画を生成...",  "  🎬  Generate Video..."), #selector(genVideo))
+        // 開発ツール
+        addDisabled(menu, "  開発ツール", bold: true, size: 11)
+        addItemTo(menu, L("  💬  Claude Code", "  💬  Claude Code"), #selector(launchCld))
+        addItemTo(menu, L("  🤖  Aider", "  🤖  Aider"), #selector(launchAider))
         menu.addItem(.separator())
-        addItemTo(menu, L("  ⚡  ベンチマーク",   "  ⚡  Benchmark"),         #selector(runBench))
-        addItemTo(menu, L("  📄  ログを開く",     "  📄  Open Logs"),         #selector(openLogs))
-        addItemTo(menu, L("  🖥  ターミナル",      "  🖥  Terminal"),           #selector(openTerminal))
-        addItemTo(menu, L("  🖼  生成ファイル",   "  🖼  Generated Files"),    #selector(openGenerated))
+        // ベータ機能
+        addDisabled(menu, "  ベータ機能", bold: true, size: 11)
+        let bbKey = "nou.beta.blackboard"
+        let bbEnabled = UserDefaults.standard.bool(forKey: bbKey)
+        let bbItem = NSMenuItem(
+            title: L(
+                "  📋  Blackboard (エージェント知識共有) \(bbEnabled ? "✓" : "")",
+                "  📋  Blackboard (Agent Knowledge) \(bbEnabled ? "✓" : "")"
+            ),
+            action: #selector(toggleBlackboard), keyEquivalent: ""
+        )
+        bbItem.target = self
+        menu.addItem(bbItem)
         menu.addItem(.separator())
-        addItemTo(menu, L("  📦  GitHubを開く",   "  📦  GitHub"),             #selector(openGitHub))
-        addItemTo(menu, L("  ✓   ヘルスチェック", "  ✓   Health Check"),       #selector(healthCheck))
+        // ユーティリティ
+        addItemTo(menu, L("  🖼  画像を生成...", "  🖼  Generate Image..."), #selector(genImage))
+        addItemTo(menu, L("  🎬  動画を生成...", "  🎬  Generate Video..."), #selector(genVideo))
+        addItemTo(menu, L("  ⚡  ベンチマーク", "  ⚡  Benchmark"), #selector(runBench))
+        addItemTo(menu, L("  📄  ログを開く", "  📄  Open Logs"), #selector(openLogs))
+        addItemTo(menu, L("  🖥  ターミナル", "  🖥  Terminal"), #selector(openTerminal))
+        menu.addItem(.separator())
+        addItemTo(menu, L("  📦  GitHubを開く", "  📦  GitHub"), #selector(openGitHub))
+        addItemTo(menu, L("  ✓  ヘルスチェック", "  ✓  Health Check"), #selector(healthCheck))
+    }
+
+    @objc func toggleBlackboard() {
+        let key = "nou.beta.blackboard"
+        let current = UserDefaults.standard.bool(forKey: key)
+        UserDefaults.standard.set(!current, forKey: key)
+        buildMenu()
     }
 
     // MARK: - Helpers
@@ -859,7 +913,7 @@ class MenubarController {
     private func startPulse() {
         guard pulseTimer == nil else { return }
         applyPulseFrame()
-        pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { [weak self] _ in
+        pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.applyPulseFrame() }
         }
     }
@@ -874,18 +928,47 @@ class MenubarController {
 
     private func applyPulseFrame() {
         pulseState.toggle()
-        let tpsInt = Int(currentTPS)
         let title = NSMutableAttributedString()
-        title.append(NSAttributedString(string: "\(roleIcon) ", attributes: [
-            .font: NSFont.systemFont(ofSize: 14)
+        // Main icon
+        title.append(NSAttributedString(string: roleIcon, attributes: [
+            .font: NSFont.systemFont(ofSize: 13)
         ]))
-        let opacity: CGFloat = pulseState ? 1.0 : 0.4
-        title.append(NSAttributedString(string: "\(tpsInt)", attributes: [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium),
+        // Animated tok/s in green (compact, monospaced)
+        let tpsStr = currentTPS >= 10 ? String(Int(currentTPS)) : String(format: "%.1f", currentTPS)
+        let opacity: CGFloat = pulseState ? 1.0 : 0.35
+        title.append(NSAttributedString(string: " \(tpsStr)", attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .semibold),
             .foregroundColor: NSColor.systemGreen.withAlphaComponent(opacity),
-            .baselineOffset: 1
+            .baselineOffset: 2
         ]))
         statusItem.button?.attributedTitle = title
+    }
+
+    /// Build a compact status string for the status row (tag 1000).
+    /// Format:  ● 122B  ● 35B  ○ VL  ● Proxy
+    func makeStatusRowTitle(portResults: [(Int, String, Bool)]) -> NSAttributedString {
+        // Map port → display label
+        let portLabel: [Int: String] = [5000: "122B", 5001: "35B", 5002: "VL", 4001: "Proxy"]
+        let parts = portResults.map { (port, _, alive) -> NSAttributedString in
+            let dot = alive ? "●" : "○"
+            let label = portLabel[port] ?? "?"
+            let color: NSColor = alive ? .systemGreen : .tertiaryLabelColor
+            return NSAttributedString(string: "\(dot) \(label)", attributes: [
+                .foregroundColor: color,
+                .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+            ])
+        }
+        let joined = NSMutableAttributedString(string: "  ")
+        for (i, part) in parts.enumerated() {
+            joined.append(part)
+            if i < parts.count - 1 {
+                joined.append(NSAttributedString(
+                    string: "  ",
+                    attributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]
+                ))
+            }
+        }
+        return joined
     }
 
     // MARK: - Status Refresh
@@ -917,6 +1000,8 @@ class MenubarController {
             // Determine node role: server if any GPU backend port (5000/5001/5002) is alive
             let gpuAlive = portResults.contains { $0.0 != 4001 && $0.2 }
 
+            let rewardCU = await RewardLedger.shared.computeUnits
+
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 // Update node role
@@ -936,27 +1021,9 @@ class MenubarController {
 
                 guard let menu = self.statusItem.menu else { return }
 
-                // ステータス行 (tag 1000) — ●●○ 形式
+                // ステータス行 (tag 1000) — 各ポートの色付きドット表示
                 if let statusItem = menu.items.first(where: { $0.tag == 1000 }) {
-                    let dots = portResults.map { (_, key, alive) -> String in
-                        let emoji = alive ? "●" : "○"
-                        let label: String
-                        switch key {
-                        case "proxy": label = "Proxy"
-                        case "main":  label = "122B"
-                        case "fast":  label = "35B"
-                        case "vision": label = "VL"
-                        default: label = key
-                        }
-                        return "\(emoji) \(label)"
-                    }.joined(separator: "  ")
-                    let color: NSColor = running == portResults.count ? .systemGreen
-                        : (running > 0 ? .systemYellow : .systemRed)
-                    statusItem.attributedTitle = NSAttributedString(
-                        string: "  " + dots,
-                        attributes: [.foregroundColor: color,
-                                     .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]
-                    )
+                    statusItem.attributedTitle = self.makeStatusRowTitle(portResults: portResults)
                 }
 
                 // 統計行 (tag 7777)
@@ -984,8 +1051,23 @@ class MenubarController {
 
                 // DePIN親メニュー更新 (tag 3000)
                 if let depinItem = menu.items.first(where: { $0.tag == 3000 }) {
-                    let status = depinRunning ? (isIdle ? "💰" : "🟢") : "○"
-                    depinItem.title = "  🌍  DePIN  \(status)"
+                    let status = depinRunning ? (isIdle ? "💰" : "🟢") : ""
+                    depinItem.title = L("  🪙  GPU公開・報酬獲得 (DePIN)  \(status)", "  🪙  Share GPU & Earn (DePIN)  \(status)")
+                }
+
+                // 報酬情報更新 (tag 3001) — DePINサブメニュー内
+                let cu = rewardCU
+                let nou = Double(cu) / 1000.0
+                if let rewardMenuItem = menu.items
+                    .compactMap({ $0.submenu?.items.first(where: { $0.tag == 3001 }) })
+                    .first {
+                    let cuStr = cu.formatted()
+                    rewardMenuItem.attributedTitle = NSAttributedString(
+                        string: L("  🪙  獲得報酬: \(cuStr) CU ≈ \(String(format:"%.3f",nou)) NOU",
+                                  "  🪙  Earned: \(cuStr) CU ≈ \(String(format:"%.3f",nou)) NOU"),
+                        attributes: [.font: NSFont.systemFont(ofSize: 12),
+                                     .foregroundColor: cu > 0 ? NSColor.systemGreen : NSColor.secondaryLabelColor]
+                    )
                 }
 
                 // Tunnel URL display (tag 6001) — sync from TunnelManager
@@ -1120,22 +1202,39 @@ class MenubarController {
     // MARK: - First Launch
 
     private func firstLaunchCheck() {
-        guard !UserDefaults.standard.bool(forKey: "nou.launched") else { return }
-        UserDefaults.standard.set(true, forKey: "nou.launched")
-        var missing: [String] = []
-        if Self.which("cloudflared") == nil { missing.append("cloudflared") }
-        guard !missing.isEmpty else { return }
-        let hasBrew = Self.which("brew") != nil
+        guard !UserDefaults.standard.bool(forKey: "nou.launched.v2") else { return }
+        UserDefaults.standard.set(true, forKey: "nou.launched.v2")
+
+        let ramGB = Int(ProcessInfo.processInfo.physicalMemory / (1024*1024*1024))
+        let tier = NodeTier.from(memoryGB: ramGB)
+
         let alert = NSAlert()
-        alert.messageText = L("NOUへようこそ！", "Welcome to NOU!")
-        alert.informativeText = L(
-            "外部公開（DePIN）に必要な cloudflared がインストールされていません。\(hasBrew ? "\n「インストール」を押すと brew install cloudflared を実行します。" : "\n先に https://brew.sh から Homebrew をインストールしてください。")",
-            "cloudflared (needed for DePIN) is not installed.\(hasBrew ? "\nClick 'Install' to run brew install cloudflared." : "\nFirst install Homebrew from https://brew.sh")"
-        )
-        if hasBrew { alert.addButton(withTitle: L("インストール","Install")) }
-        alert.addButton(withTitle: L("後で","Later"))
-        if hasBrew, alert.runModal() == .alertFirstButtonReturn {
-            openTerminalWith("export PATH=/opt/homebrew/bin:$PATH && brew install cloudflared && echo '✅ Done'")
+        alert.messageText = L("NOU へようこそ！", "Welcome to NOU!")
+        alert.informativeText = L("""
+            あなたのMac: \(tier.icon) \(tier.rawValue) (\(ramGB) GB)
+
+            NOU は Apple Silicon の GPU でAIモデルをローカル実行するアプリです。
+            インターネット不要・データは外部に出ません。
+
+            まず「ダッシュボード」を開いてモデルをダウンロードしてください。
+            ダウンロード後、⌘⇧N で Quick AI パネルが使えます。
+
+            Claude Code / Aider などのツールは localhost:4001 に向けるだけで動きます。
+            """, """
+            Your Mac: \(tier.icon) \(tier.rawValue) (\(ramGB) GB)
+
+            NOU runs AI models locally on Apple Silicon GPU.
+            No internet required. Your data never leaves your device.
+
+            Open Dashboard to download a model first.
+            After downloading, use ⌘⇧N for Quick AI.
+
+            Point Claude Code / Aider at localhost:4001 and go.
+            """)
+        alert.addButton(withTitle: L("ダッシュボードを開く", "Open Dashboard"))
+        alert.addButton(withTitle: L("後で", "Later"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            openDashboard()
         }
     }
 

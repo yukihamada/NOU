@@ -169,18 +169,20 @@ actor DistributedInference {
 
     /// Build the command to start llama-server with RPC offloading.
     /// The coordinator runs on this Mac, offloading layers to RPC workers.
+    /// Pass draftModelPath to enable speculative decoding (smaller draft model).
     func buildLlamaServerCommand(
         modelPath: String,
         port: Int = 5030,
         ctxSize: Int = 4096,
-        nGpuLayers: Int = 99
+        nGpuLayers: Int = 99,
+        draftModelPath: String? = nil
     ) async -> (command: String, args: [String])? {
         guard let binary = llamaServerWithRPC else { return nil }
 
         await refreshWorkers()
         guard let rpc = rpcArgument() else { return nil }
 
-        let args = [
+        var args = [
             "--model", modelPath,
             "--host", "127.0.0.1",
             "--port", "\(port)",
@@ -188,7 +190,47 @@ actor DistributedInference {
             "--n-gpu-layers", "\(nGpuLayers)",
             "--ctx-size", "\(ctxSize)",
         ]
+
+        // Speculative decoding: run a small draft model alongside the main model
+        // Draft model generates candidate tokens, main model verifies in parallel
+        if let draft = draftModelPath ?? speculativeDraftModel {
+            args += ["--draft-model", draft, "--draft-max-tokens", "8"]
+        }
+
         return (binary, args)
+    }
+
+    // MARK: - Speculative Decoding
+
+    var speculativeEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "nou.speculative.enabled")
+    }
+
+    var speculativeDraftModel: String? {
+        UserDefaults.standard.string(forKey: "nou.speculative.draftModel")
+    }
+
+    func setSpeculative(enabled: Bool, draftModelPath: String? = nil) {
+        UserDefaults.standard.set(enabled, forKey: "nou.speculative.enabled")
+        if let path = draftModelPath {
+            UserDefaults.standard.set(path, forKey: "nou.speculative.draftModel")
+        }
+    }
+
+    // MARK: - Auto-sync RPC workers from discovered nodes
+
+    /// Called by NOUBrowser when nodes are discovered.
+    /// Automatically adds paired+RPC-capable remote nodes as RPC workers.
+    func syncWorkersFromNodes(_ nodes: [NOUNode]) async {
+        guard distributedEnabled else { return }
+        for node in nodes where !node.isLocal && node.healthy && node.rpcAvailable {
+            // Extract IP from node URL (e.g. "http://192.168.0.5:4001" → "192.168.0.5")
+            guard let url = URL(string: node.url), let host = url.host else { continue }
+            // Skip if already tracked
+            if workers.contains(where: { $0.host == host }) { continue }
+            print("[DistributedInference] Auto-adding RPC worker: \(host):50052 (\(node.name))")
+            addWorker(host: host, port: 50052)
+        }
     }
 
     // MARK: - Enable/Disable

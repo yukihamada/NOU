@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOUを始める — 5分セットアップガイド</title>
+<meta name="description" content="NOU のセットアップ手順。ダウンロードからモデル選択、Claude Code連携まで5分で完了。">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="canonical" href="https://nou.link/start">
+<meta property="og:title" content="NOUを始める — 5分セットアップガイド">
+<meta property="og:description" content="MacにプライベートAIを5分でセットアップ。モデル選択、Claude Code連携まで。">
+<meta property="og:url" content="https://nou.link/start">
+<meta property="og:image" content="https://nou.link/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://enabler-analytics.fly.dev/t.js" defer></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0a;--card:#111;--border:#1e1e1e;
+  --text:#ededed;--muted:#888;--dim:#555;
+  --accent:#58a6ff;--accent2:#a78bfa;--green:#3fb950;
+  --grad:linear-gradient(135deg,#58a6ff,#a78bfa);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter','Noto Sans JP',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:opacity .2s}a:hover{opacity:.8}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05)}
+.nav-logo{font-size:20px;font-weight:800;letter-spacing:-0.5px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;align-items:center;gap:20px}
+.nav-links a{font-size:13px;color:var(--muted);font-weight:500}
+.nav-links a:hover{color:var(--text);opacity:1}
+.btn-dl{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#000;background:var(--grad);border-radius:8px;padding:7px 16px}
+@media(max-width:680px){.nav-links{display:none}}
+
+.hero{text-align:center;padding:120px 24px 60px}
+.hero-label{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--accent2);background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.2);border-radius:20px;padding:5px 14px;margin-bottom:24px}
+.hero h1{font-size:48px;font-weight:800;letter-spacing:-2px;line-height:1.1;margin-bottom:16px}
+.hero h1 span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:17px;color:var(--muted);max-width:480px;margin:0 auto}
+
+.container{max-width:820px;margin:0 auto;padding:0 24px}
+
+/* RAM selector */
+.ram-picker{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:48px 0 16px}
+.ram-btn{padding:10px 20px;border-radius:10px;border:2px solid var(--border);background:var(--card);color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.ram-btn:hover{border-color:var(--accent);color:var(--text)}
+.ram-btn.active{border-color:var(--accent);background:rgba(88,166,255,.1);color:var(--accent)}
+.ram-note{text-align:center;font-size:12px;color:var(--muted);margin-bottom:40px}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:24px;padding:36px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.step:last-child{border-bottom:none}
+.step-num{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,rgba(88,166,255,.2),rgba(167,139,250,.2));border:2px solid rgba(88,166,255,.4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:var(--accent);flex-shrink:0;margin-top:4px}
+.step-content{flex:1}
+.step-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);background:rgba(167,139,250,.12);border-radius:4px;padding:2px 8px;margin-bottom:8px}
+.step h2{font-size:22px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px}
+.step p{font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:14px}
+.step p strong{color:var(--text)}
+
+/* Code blocks */
+.code-block{position:relative;background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:16px 18px;font-family:monospace;font-size:13px;line-height:1.8;color:#8b949e;margin:12px 0}
+.code-block .hl{color:#58a6ff}
+.code-block .gr{color:#3fb950}
+.code-block .pu{color:#a78bfa}
+.code-block .wh{color:#ededed}
+.copy-btn{position:absolute;top:10px;right:12px;background:#1e2a3a;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .2s}
+.copy-btn:hover{background:#2a3a4a;color:#ededed}
+.copy-btn.copied{background:#1a3a1a;border-color:#2ea043;color:#3fb950}
+
+/* Model card */
+.model-card{background:linear-gradient(135deg,#0d1f35,#0d1a2a);border:1px solid rgba(88,166,255,.25);border-radius:12px;padding:20px 24px;margin:12px 0}
+.model-card-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.model-name-big{font-size:20px;font-weight:800;color:var(--accent)}
+.model-badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:10px;font-weight:700;border-radius:5px;padding:3px 8px}
+.badge-blue{background:rgba(88,166,255,.15);color:#58a6ff;border:1px solid rgba(88,166,255,.25)}
+.badge-green{background:rgba(63,185,80,.15);color:#3fb950;border:1px solid rgba(63,185,80,.25)}
+.badge-purple{background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.25)}
+.model-cmd{font-family:monospace;font-size:12px;color:#8b949e;background:#0a1520;border-radius:6px;padding:10px 14px;word-break:break-all;margin-top:10px}
+
+/* Tool cards */
+.tools-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:16px 0}
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.tool-card h3{font-size:15px;font-weight:700;margin-bottom:6px}
+.tool-card p{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+@media(max-width:600px){.tools-grid{grid-template-columns:1fr}}
+
+/* Bonus section */
+.bonus{background:linear-gradient(135deg,#0d1a0d,#0a1a0d);border:1px solid rgba(63,185,80,.2);border-radius:14px;padding:28px 32px;margin:40px 0}
+.bonus h3{font-size:18px;font-weight:700;margin-bottom:8px;color:var(--green)}
+.bonus p{font-size:13px;color:var(--muted);line-height:1.8}
+
+/* CTA */
+.cta{text-align:center;padding:60px 24px 80px}
+.cta h2{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:12px}
+.cta p{font-size:15px;color:var(--muted);margin-bottom:28px}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#000;background:var(--grad);border-radius:12px;padding:14px 28px}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:13px 24px;margin-left:12px}
+.btn-secondary:hover{color:var(--text);border-color:var(--accent);opacity:1}
+
+/* Tip */
+.tip{display:flex;gap:10px;background:#111;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0}
+.tip-icon{font-size:16px;flex-shrink:0;margin-top:2px}
+.tip p{font-size:13px;color:var(--muted);margin:0;line-height:1.7}
+.tip strong{color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">NOU</a>
+  <div class="nav-links">
+    <a href="/distributed.html">分散推論</a>
+    <a href="/depin.html">DePIN</a>
+    <a href="/docs.html">ドキュメント</a>
+  </div>
+  <a class="btn-dl" href="https://github.com/enablerdao/NOU/releases/latest">⬇ ダウンロード</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">🚀 クイックスタート</div>
+  <h1>5分で始める<br><span>NOU セットアップ</span></h1>
+  <p>MacにプライベートAIを動かして<br>Claude Code・Cursor・aider に接続するまで</p>
+</div>
+
+<div class="container">
+
+  <!-- RAM selector -->
+  <div style="text-align:center;margin-bottom:8px;font-size:13px;color:var(--muted);font-weight:600">あなたのMacのメモリを選んでください:</div>
+  <div class="ram-picker">
+    <button class="ram-btn" data-ram="8" onclick="selectRam(8)">8GB</button>
+    <button class="ram-btn active" data-ram="16" onclick="selectRam(16)">16GB</button>
+    <button class="ram-btn" data-ram="32" onclick="selectRam(32)">32GB</button>
+    <button class="ram-btn" data-ram="64" onclick="selectRam(64)">64GB+</button>
+  </div>
+  <div class="ram-note" id="ram-note">16GB → <strong style="color:var(--accent)">Gemma 4 4B</strong> を推奨 (速度と精度のバランスが最適)</div>
+
+  <div class="steps">
+
+    <!-- Step 1: Download -->
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-tag">ダウンロード & インストール</div>
+        <h2>NOU.app を開く</h2>
+        <p>GitHubから最新版をダウンロードして、<strong>アプリケーションフォルダ</strong>にドラッグします。<br>
+        初回起動時に「開発元を確認できません」と表示されたら、右クリック → 「開く」を選択してください。</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a href="https://github.com/enablerdao/NOU/releases/latest" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#000;background:var(--grad);border-radius:10px;padding:11px 22px">⬇ NOU.app をダウンロード</a>
+          <a href="https://github.com/enablerdao/NOU" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:10px 18px">GitHub ↗</a>
+        </div>
+        <div class="tip" style="margin-top:16px">
+          <div class="tip-icon">💡</div>
+          <p>起動すると <strong>メニューバー (⚡)</strong> にアイコンが表示されます。<br>
+          クリックでダッシュボードを開けます → <code style="background:#1a2a3a;padding:2px 6px;border-radius:4px;font-size:11px">http://localhost:4001</code></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Model -->
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-tag">AIモデルのダウンロード</div>
+        <h2 id="step2-title">Gemma 4 4B をダウンロード</h2>
+        <p id="step2-desc">ターミナルで以下を実行します。初回は3〜5分かかります。</p>
+
+        <div class="model-card">
+          <div class="model-card-header">
+            <span class="model-name-big" id="rec-model-name">Gemma 4 4B</span>
+            <div class="model-badges">
+              <span class="badge badge-blue" id="rec-model-size">約3GB</span>
+              <span class="badge badge-green" id="rec-model-note">16GB Macに最適 ✨</span>
+              <span class="badge badge-purple">MLX</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="rec-model-desc">速度と精度のバランスが良く、コーディングや質問応答に最適です。</div>
+          <div class="code-block" id="rec-cmd" style="font-size:12px">
+            <span class="gr"># Python環境に mlx-lm がなければまず:</span><br>
+            pip install mlx-lm<br><br>
+            <span class="gr"># モデルをダウンロード (〜5分):</span><br>
+            <span class="wh" id="rec-cmd-text">python -m mlx_lm.generate --model mlx-community/gemma-4-4b-it-4bit --prompt "hello"</span>
+            <button class="copy-btn" onclick="copyCmd()">コピー</button>
+          </div>
+        </div>
+
+        <div class="tip">
+          <div class="tip-icon">⚡</div>
+          <p><strong>もっと簡単な方法</strong>: NOUダッシュボード (<code style="background:#1a2a3a;padding:2px 6px;border-radius:4px;font-size:11px">localhost:4001</code>) を開くと、あなたのMacに最適なモデルが自動で表示されます。</p>
+        </div>
+
+        <details style="margin-top:14px">
+          <summary style="font-size:13px;color:var(--muted);cursor:pointer;padding:8px 0">▶ 他のモデルを見る</summary>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px" id="other-models">
+            <!-- injected by JS -->
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Step 3: Connect -->
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-tag">AIツールと接続</div>
+        <h2>Claude Code / Cursor で使う</h2>
+        <p>NOUはOpenAI互換APIとして動作します。<strong>ローカルIPアドレス</strong>を設定するだけでOK。</p>
+
+        <div class="tools-grid">
+          <div class="tool-card">
+            <h3>⚡ Claude Code</h3>
+            <p>プロジェクトルートの <code style="background:#1a2a3a;padding:1px 5px;border-radius:3px;font-size:11px">.env</code> ファイルに追記:</p>
+            <div class="code-block" style="margin:0">
+              <span class="wh">ANTHROPIC_BASE_URL</span>=<span class="hl">http://localhost:4001</span>
+              <button class="copy-btn" onclick="copyToClipboard('ANTHROPIC_BASE_URL=http://localhost:4001')">コピー</button>
+            </div>
+          </div>
+          <div class="tool-card">
+            <h3>🖱️ Cursor / VS Code</h3>
+            <p>設定でモデルのAPI URLを変更:</p>
+            <div class="code-block" style="margin:0">
+              <span class="gr">Base URL:</span><br>
+              <span class="hl">http://localhost:4001/v1</span>
+              <button class="copy-btn" onclick="copyToClipboard('http://localhost:4001/v1')">コピー</button>
+            </div>
+          </div>
+          <div class="tool-card">
+            <h3>🤖 aider</h3>
+            <div class="code-block" style="margin:0;font-size:11px">
+              <span class="wh">OPENAI_API_BASE</span>=<span class="hl">http://localhost:4001/v1</span> \<br>
+              <span class="wh">OPENAI_API_KEY</span>=<span class="pu">sk-dummy</span> \<br>
+              aider <span class="gr">--model</span> openai/<span id="aider-model">gemma-4-4b</span>
+              <button class="copy-btn" onclick="copyAider()">コピー</button>
+            </div>
+          </div>
+          <div class="tool-card">
+            <h3>🔑 ショートカット</h3>
+            <p>どこからでも瞬時にチャット:</p>
+            <div style="text-align:center;padding:8px 0">
+              <kbd style="background:#1a2a3a;border:1px solid #2a3a4a;border-radius:6px;padding:6px 12px;font-size:16px;font-weight:700;color:#58a6ff">⌘⇧N</kbd>
+              <div style="font-size:11px;color:var(--muted);margin-top:8px">Quick AI パネルを開く</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip">
+          <div class="tip-icon">🌐</div>
+          <p><strong>別のMacから使いたい場合</strong>: ダッシュボードの「DePIN」タブから「リレーに接続」を押すと、<strong>固定の公開URL</strong>が発行されます。どこからでもアクセス可能。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Confirm -->
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-tag">動作確認</div>
+        <h2>動いているか確認する</h2>
+        <p>ターミナルで簡単なテストリクエストを送ってみましょう:</p>
+        <div class="code-block">
+          <span class="gr">curl</span> http://localhost:4001/v1/chat/completions \<br>
+          &nbsp; -H <span class="pu">"Content-Type: application/json"</span> \<br>
+          &nbsp; -d <span class="pu">'{<br>
+          &nbsp;&nbsp;&nbsp;"model": "<span id="test-model">gemma-4-4b</span>",<br>
+          &nbsp;&nbsp;&nbsp;"messages": [{"role":"user","content":"Hello!"}]<br>
+          &nbsp;}'</span>
+          <button class="copy-btn" onclick="copyTest()">コピー</button>
+        </div>
+        <div style="margin-top:12px;padding:10px 14px;background:#0d1f0d;border:1px solid rgba(63,185,80,.2);border-radius:8px;font-size:12px;color:var(--muted)">
+          ✅ JSON レスポンスが返ってきたら成功です。ダッシュボードのモデル状態が <span style="color:var(--green);font-weight:600">🟢 稼働中</span> になっているか確認してください。
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /steps -->
+
+  <!-- Bonus: DePIN -->
+  <div class="bonus">
+    <h3>💰 ボーナス: DePINで報酬を稼ぐ</h3>
+    <p style="margin-bottom:12px">AIを使うだけでなく、他の人のために提供して報酬を得られます。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:12px;color:var(--text);margin-bottom:6px">1. ダッシュボードの「DePIN」→「リレーに接続」</div>
+        <div style="font-size:12px;color:var(--text);margin-bottom:6px">2. Solanaウォレットアドレスを登録</div>
+        <div style="font-size:12px;color:var(--text)">3. 処理されたリクエストに応じてNCH報酬が貯まる</div>
+      </div>
+      <a href="/depin.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--green);border:1px solid rgba(63,185,80,.3);border-radius:8px;padding:10px 18px;text-decoration:none;flex-shrink:0">DePINの詳細 →</a>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="cta">
+  <h2>準備はできましたか？</h2>
+  <p>NOUを使ってみて、フィードバックやバグ報告はGitHubへ</p>
+  <a href="https://github.com/enablerdao/NOU/releases/latest" class="btn-primary">⬇ NOU をダウンロード</a>
+  <a href="https://github.com/enablerdao/NOU" class="btn-secondary">GitHub ↗</a>
+</div>
+
+<script>
+const models = {
+  8:  {name:'Gemma 4 2B',  id:'mlx-community/gemma-4-2b-it-4bit',   size:'約2GB',  note:'8GB Mac向け、超高速',        desc:'Google最新の軽量モデル。8GBのMacBook Airでもサクサク動きます。',  aider:'gemma-4-2b'},
+  16: {name:'Gemma 4 4B',  id:'mlx-community/gemma-4-4b-it-4bit',   size:'約3GB',  note:'16GB Macに最適 ✨',          desc:'速度と精度のバランスが良く、コーディングや質問応答に最適。',        aider:'gemma-4-4b'},
+  32: {name:'Gemma 4 12B', id:'mlx-community/gemma-4-12b-it-4bit',  size:'約8GB',  note:'精度・速度のバランス',        desc:'32GBあれば十分余裕があり、複雑なコードも高精度で処理できます。',  aider:'gemma-4-12b'},
+  64: {name:'Gemma 4 27B', id:'mlx-community/gemma-4-27b-it-4bit',  size:'約18GB', note:'最高精度',                    desc:'64GB以上のMac Studio/Mac Pro向け。GPT-4クラスの高精度。',        aider:'gemma-4-27b'},
+};
+const others = {
+  8:  [{name:'Qwen3-4B',    id:'mlx-community/Qwen3-4B-4bit',    note:'推論・コーディング得意'},{name:'DeepSeek-R1-1.5B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-1.5B-4bit', note:'超軽量・推論特化'}],
+  16: [{name:'Qwen3-8B',    id:'mlx-community/Qwen3-8B-4bit',    note:'推論・コーディング得意'},{name:'DeepSeek-R1-7B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit', note:'推論・数学が得意'}],
+  32: [{name:'Qwen3-14B',   id:'mlx-community/Qwen3-14B-4bit',   note:'高精度コーディング'},{name:'DeepSeek-R1-14B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit', note:'高精度推論'}],
+  64: [{name:'Qwen3-32B',   id:'mlx-community/Qwen3-32B-4bit',   note:'超高精度'},{name:'Llama4-Scout-17B', id:'mlx-community/Llama-4-Scout-17B-16E-Instruct-4bit', note:'Meta最新モデル'}],
+};
+
+let currentRam = 16;
+
+function selectRam(gb) {
+  currentRam = gb;
+  document.querySelectorAll('.ram-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.ram) === gb));
+  const m = models[gb];
+  const notes = {8:'速くて軽い',16:'速度と精度のベストバランス',32:'複雑なタスクも安心',64:'GPT-4クラスの精度'};
+  document.getElementById('ram-note').innerHTML = `${gb}GB → <strong style="color:var(--accent)">${m.name}</strong> を推奨 (${notes[gb]})`;
+  document.getElementById('rec-model-name').textContent = m.name;
+  document.getElementById('rec-model-size').textContent = m.size;
+  document.getElementById('rec-model-note').textContent = m.note;
+  document.getElementById('rec-model-desc').textContent = m.desc;
+  const cmdText = `python -m mlx_lm.generate --model ${m.id} --prompt "hello"`;
+  document.getElementById('rec-cmd-text').textContent = cmdText;
+  document.getElementById('step2-title').textContent = m.name + ' をダウンロード';
+  document.getElementById('aider-model').textContent = m.aider;
+  document.getElementById('test-model').textContent = m.aider;
+
+  const otherList = others[gb] || [];
+  document.getElementById('other-models').innerHTML = otherList.map(o => `
+    <div style="background:#111;border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <span style="font-weight:700;font-size:14px">${o.name}</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">${o.note}</span>
+      </div>
+      <button onclick="copyToClipboard('python -m mlx_lm.generate --model ${o.id} --prompt hello')" style="font-size:11px;background:#1e2a3a;border:1px solid #30363d;color:#8b949e;border-radius:5px;padding:4px 10px;cursor:pointer">コマンドをコピー</button>
+    </div>`).join('');
+}
+
+function copyCmd() {
+  const m = models[currentRam];
+  copyToClipboard(`pip install mlx-lm\npython -m mlx_lm.generate --model ${m.id} --prompt "hello"`);
+}
+
+function copyAider() {
+  const m = models[currentRam];
+  copyToClipboard(`OPENAI_API_BASE=http://localhost:4001/v1 OPENAI_API_KEY=sk-dummy aider --model openai/${m.aider}`);
+}
+
+function copyTest() {
+  const m = models[currentRam];
+  copyToClipboard(`curl http://localhost:4001/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"${m.aider}","messages":[{"role":"user","content":"Hello!"}]}'`);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Visual feedback on nearest copy button
+    const evt = window.event;
+    if (evt && evt.target) {
+      const btn = evt.target;
+      const orig = btn.textContent;
+      btn.textContent = '✓ コピー済み';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+    }
+  });
+}
+
+// Try to auto-detect RAM from localStorage
+const savedRam = parseInt(localStorage.getItem('nou.ram') || '16');
+selectRam([8,16,32,64].includes(savedRam) ? savedRam : 16);
+document.querySelectorAll('.ram-btn').forEach(b => {
+  b.addEventListener('click', () => localStorage.setItem('nou.ram', b.dataset.ram));
+});
+</script>
+</body>
+</html>

@@ -12,9 +12,10 @@ struct ModelTransferHandler {
         let type: String  // "gguf" or "mlx"
     }
 
-    // MARK: - GET /api/models/available
+    // MARK: - GET /api/models/available (AUTH REQUIRED)
 
     static func handleAvailable(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireAuth(request: request) { return deny }
         let files = scanLocalModels()
         let result: [[String: Any]] = files.map { f in
             ["name": f.name, "path": f.path, "size": f.size, "type": f.type]
@@ -27,9 +28,10 @@ struct ModelTransferHandler {
         )
     }
 
-    // MARK: - GET /api/models/download/{filename}
+    // MARK: - GET /api/models/download/{filename} (AUTH REQUIRED)
 
     static func handleDownload(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireAuth(request: request) { return deny }
         guard let filename = context.parameters.get("filename"), !filename.isEmpty else {
             return Response(status: .badRequest,
                 headers: [.contentType: "application/json"],
@@ -73,13 +75,25 @@ struct ModelTransferHandler {
         )
     }
 
-    // MARK: - GET /api/models/download-mlx/{name} — Download MLX model as tar stream
+    // MARK: - GET /api/models/download-mlx/{name} — Download MLX model as tar stream (AUTH REQUIRED)
 
     static func handleDownloadMLX(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireAuth(request: request) { return deny }
         guard let modelName = context.parameters.get("name"), !modelName.isEmpty else {
             return Response(status: .badRequest,
                 headers: [.contentType: "application/json"],
                 body: .init(byteBuffer: .init(string: #"{"error":"missing model name"}"#)))
+        }
+
+        // Validate: only allow alphanumeric, dash, underscore, dot, slash (HuggingFace org/repo format)
+        // Reject path traversal attempts (e.g. "../" or absolute paths)
+        let allowedPattern = #"^[a-zA-Z0-9_\-./]+$"#
+        guard modelName.range(of: allowedPattern, options: .regularExpression) != nil,
+              !modelName.contains(".."),
+              !modelName.hasPrefix("/") else {
+            return Response(status: .badRequest,
+                headers: [.contentType: "application/json"],
+                body: .init(byteBuffer: .init(string: #"{"error":"invalid model name"}"#)))
         }
 
         // Find the model directory in HuggingFace cache

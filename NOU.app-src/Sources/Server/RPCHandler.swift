@@ -66,9 +66,10 @@ struct RPCHandler {
             body: .init(byteBuffer: .init(data: data)))
     }
 
-    /// POST /api/rpc/workers — Add a remote RPC worker.
+    /// POST /api/rpc/workers — Add a remote RPC worker. (LOCAL ONLY)
     /// Body: { "host": "192.168.0.5", "port": 50052 }
     static func handleAddWorker(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireLocal(request: request) { return deny }
         let di = DistributedInference.shared
         let buf = try await request.body.collect(upTo: 4096)
         guard let data = buf.getData(at: 0, length: buf.readableBytes),
@@ -93,9 +94,10 @@ struct RPCHandler {
             body: .init(byteBuffer: .init(data: out)))
     }
 
-    /// DELETE /api/rpc/workers — Remove a remote RPC worker.
+    /// DELETE /api/rpc/workers — Remove a remote RPC worker. (LOCAL ONLY)
     /// Body: { "host": "192.168.0.5", "port": 50052 }
     static func handleRemoveWorker(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        if let deny = AuthCheck.requireLocal(request: request) { return deny }
         let di = DistributedInference.shared
         let buf = try await request.body.collect(upTo: 4096)
         guard let data = buf.getData(at: 0, length: buf.readableBytes),
@@ -144,6 +146,61 @@ struct RPCHandler {
         let enabled = body?["enabled"] as? Bool ?? true
         await di.setDistributedEnabled(enabled)
         let result: [String: Any] = ["ok": true, "distributed_enabled": enabled]
+        let data = try JSONSerialization.data(withJSONObject: result)
+        return Response(status: .ok,
+            headers: [.contentType: "application/json"],
+            body: .init(byteBuffer: .init(data: data)))
+    }
+
+    /// POST /api/rpc/speculative — Enable/disable speculative decoding with a draft model.
+    /// Body: { "enabled": true, "draft_model": "/path/to/draft.gguf" }
+    static func handleSpeculative(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        guard AuthCheck.isAuthorized(request: request) else {
+            return Response(status: .unauthorized, headers: [.contentType: "application/json"],
+                body: .init(byteBuffer: .init(string: #"{"error":"Not authorized"}"#)))
+        }
+        let di = DistributedInference.shared
+        let buf = try await request.body.collect(upTo: 4096)
+        let body = (try? JSONSerialization.jsonObject(
+            with: buf.getData(at: 0, length: buf.readableBytes) ?? Data()
+        )) as? [String: Any]
+        let enabled = body?["enabled"] as? Bool ?? true
+        let draftModel = body?["draft_model"] as? String
+        await di.setSpeculative(enabled: enabled, draftModelPath: draftModel)
+        let result: [String: Any] = [
+            "ok": true,
+            "speculative_enabled": enabled,
+            "draft_model": draftModel ?? NSNull()
+        ]
+        let data = try JSONSerialization.data(withJSONObject: result)
+        return Response(status: .ok,
+            headers: [.contentType: "application/json"],
+            body: .init(byteBuffer: .init(data: data)))
+    }
+
+    // MARK: - Enhanced status with speculative info
+
+    /// GET /api/rpc/status — Current distributed inference status (extended).
+    static func handleStatusV2(_ request: Request, _ context: some RequestContext) async throws -> Response {
+        let di = DistributedInference.shared
+        let status = await di.status()
+        let result: [String: Any] = [
+            "local_rpc_running": status.localRPCRunning,
+            "local_rpc_port": status.localRPCPort,
+            "distributed_enabled": status.distributedEnabled,
+            "rpc_server_available": status.rpcServerAvailable,
+            "llama_server_rpc_available": status.llamaServerRPCAvailable,
+            "speculative_enabled": await di.speculativeEnabled,
+            "draft_model": await di.speculativeDraftModel ?? NSNull(),
+            "workers": status.workers.map { w in
+                [
+                    "host": w.host,
+                    "port": w.port,
+                    "status": w.status.rawValue,
+                    "endpoint": w.endpoint,
+                ] as [String: Any]
+            }
+        ]
         let data = try JSONSerialization.data(withJSONObject: result)
         return Response(status: .ok,
             headers: [.contentType: "application/json"],

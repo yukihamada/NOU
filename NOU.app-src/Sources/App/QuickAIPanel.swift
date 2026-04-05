@@ -1,6 +1,13 @@
 import AppKit
 import Foundation
 
+// MARK: - KeyablePanel (fixes keyboard focus for nonactivatingPanel)
+
+private final class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 // MARK: - QuickAIPanel
 
 /// A floating panel for quick AI queries via ⌘⇧N.
@@ -45,7 +52,7 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
     private func setupPanel() {
         // Panel
         let frame = NSRect(x: 0, y: 0, width: panelWidth, height: initialHeight)
-        panel = NSPanel(
+        panel = KeyablePanel(
             contentRect: frame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -64,6 +71,8 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
         containerView.wantsLayer = true
         containerView.layer?.backgroundColor = bgColor.cgColor
         containerView.layer?.cornerRadius = 12
+        containerView.layer?.cornerCurve = .continuous   // Apple-style smooth corners
+        containerView.layer?.masksToBounds = true         // clip subviews to rounded corners
         containerView.layer?.borderColor = borderColor.cgColor
         containerView.layer?.borderWidth = 1
         containerView.autoresizingMask = [.width, .height]
@@ -84,8 +93,9 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
         inputField.cell?.wraps = false
         inputField.cell?.isScrollable = true
         // Inset text
+        // Allow all input sources including Japanese IME (nil = no restriction)
         if let cell = inputField.cell as? NSTextFieldCell {
-            cell.allowedInputSourceLocales = [NSAllRomanInputSourcesLocaleIdentifier]
+            cell.allowedInputSourceLocales = nil
         }
         inputField.delegate = self
         inputField.target = self
@@ -203,16 +213,52 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
         }
     }
 
+    /// Resolve the best available endpoint for AI completions.
+    /// Tries local proxy first; if models aren't running, falls back to discovered remote nodes.
+    private func resolveEndpoint() async -> URL? {
+        let local = URL(string: "http://localhost:4001")!
+
+        // Check if local proxy is running and has at least one model
+        if let health = try? await URLSession.shared.data(from: local.appendingPathComponent("health")),
+           let json = try? JSONSerialization.jsonObject(with: health.0) as? [String: Any],
+           let models = json["models"] as? [String: Bool],
+           models.values.contains(true) {
+            return local.appendingPathComponent("v1/chat/completions")
+        }
+
+        // Fallback: check discovered remote nodes
+        if let nodesData = try? await URLSession.shared.data(from: local.appendingPathComponent("api/nodes")),
+           let nodes = try? JSONSerialization.jsonObject(with: nodesData.0) as? [[String: Any]] {
+            for node in nodes {
+                guard let nodeURL = node["url"] as? String,
+                      let healthy = node["healthy"] as? Bool, healthy,
+                      let models = node["models"] as? [[String: Any]],
+                      models.contains(where: { ($0["running"] as? Bool) == true }),
+                      let url = URL(string: nodeURL) else { continue }
+                // Use this remote node
+                print("[QuickAI] Local models not running, using remote node: \(nodeURL)")
+                return url.appendingPathComponent("v1/chat/completions")
+            }
+        }
+
+        // No model available anywhere
+        return nil
+    }
+
     private func streamCompletion(messages: [[String: String]], prompt: String) async {
-        let url = URL(string: "http://localhost:4001/v1/chat/completions")!
-        var request = URLRequest(url: url)
+        guard let endpoint = await resolveEndpoint() else {
+            await showError("No AI model running. Start AI from the menubar ▶ or connect to a remote node.")
+            return
+        }
+
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 60
 
         let body: [String: Any] = [
-            "model": "fast",
-            "max_tokens": 500,
+            "model": "auto",   // smart routing: picks fastest available model
+            "max_tokens": 1000,
             "stream": true,
             "messages": messages.map { $0 as [String: Any] }
         ]
@@ -226,9 +272,13 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
 
         do {
             let (bytes, response) = try await URLSession.shared.bytes(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-                await showError("Server error (\(code)). Is the proxy running on :4001?")
+            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard code == 200 else {
+                if code == 401 {
+                    await showError("Auth error — pair this node with the remote node first.")
+                } else {
+                    await showError("Server error (\(code)) — check if AI is running.")
+                }
                 return
             }
 
@@ -250,20 +300,17 @@ final class QuickAIPanel: NSObject, NSTextFieldDelegate {
                 fullResponse += content
                 self.currentResponse = fullResponse
                 self.responseTextView.string = fullResponse
-                // Auto-scroll to bottom
                 self.responseTextView.scrollToEndOfDocument(nil)
-                // Resize panel based on content
                 self.adjustHeight()
             }
 
-            // Save to history
             if !fullResponse.isEmpty {
                 history.append(Exchange(prompt: prompt, response: fullResponse))
                 if history.count > 5 { history.removeFirst() }
             }
 
         } catch is CancellationError {
-            // cancelled, ignore
+            // cancelled by user
         } catch {
             await showError("Connection failed: \(error.localizedDescription)")
         }
