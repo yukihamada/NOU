@@ -60,9 +60,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TunnelManager.shared.autoStart()
         }
 
-        // Extract bundled model on first launch (zero-config AI)
-        extractBundledModel()
-        // Auto-configure Claude Code + Ollama settings (first launch)
+        // Download model on first launch if needed (zero-config AI)
+        ensureModel()
+        // Auto-configure Claude Code settings (first launch)
         autoConfigureDevTools()
 
         // Auto-start llama-server with existing GGUF model
@@ -248,108 +248,138 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Extract bundled GGUF model (zero-config: install = ready to chat)
+    // MARK: - Auto-download optimal model on first launch (no bundled model needed)
 
-    private func extractBundledModel() {
+    private func ensureModel() {
         let fm = FileManager.default
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
-        let bundledName = "Qwen3.5-0.8B-Q4_K_M.gguf"
-        let destPath = modelDir.appendingPathComponent(bundledName)
 
-        // Skip if already extracted (or a better model exists)
-        guard !fm.fileExists(atPath: destPath.path) else { return }
-        // If user already has a larger model, skip extraction
-        let existingModels = (try? fm.contentsOfDirectory(atPath: modelDir.path)) ?? []
-        if existingModels.contains(where: { $0.hasSuffix(".gguf") }) { return }
-
-        // Find bundled model in app Resources
-        guard let bundled = Bundle.main.url(forResource: "default-model", withExtension: "gguf") else {
-            print("[NOU] No bundled model found in Resources")
+        // If any GGUF already exists, skip
+        let existing = (try? fm.contentsOfDirectory(atPath: modelDir.path))?.filter { $0.hasSuffix(".gguf") } ?? []
+        if !existing.isEmpty {
+            print("[NOU] Model already exists: \(existing.first ?? "")")
             return
         }
 
-        do {
-            try fm.createDirectory(at: modelDir, withIntermediateDirectories: true)
-            try fm.copyItem(at: bundled, to: destPath)
-            print("[NOU] Extracted bundled model: \(bundledName)")
-        } catch {
-            print("[NOU] Failed to extract model: \(error)")
+        // If bundled model exists in Resources, extract it as a quick-start fallback
+        if let bundled = Bundle.main.url(forResource: "default-model", withExtension: "gguf") {
+            let dest = modelDir.appendingPathComponent("bundled-model.gguf")
+            do {
+                try fm.createDirectory(at: modelDir, withIntermediateDirectories: true)
+                try fm.copyItem(at: bundled, to: dest)
+                print("[NOU] Extracted bundled model")
+            } catch {
+                print("[NOU] Bundled extraction failed: \(error)")
+            }
         }
 
-        // Schedule background upgrade to RAM-optimal model
-        scheduleModelUpgrade()
+        // Download RAM-optimal model (runs immediately, not delayed)
+        downloadOptimalModel()
     }
 
-    /// Background model upgrade: download a larger GGUF from HuggingFace (no Ollama needed)
-    private func scheduleModelUpgrade() {
+    /// Download models: fast 1.5B first (instant chat), then RAM-optimal in background
+    private func downloadOptimalModel() {
         let ramGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
         let fm = FileManager.default
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
 
-        // Select optimal GGUF based on RAM
-        let targetFile: String
-        let targetURL: String
-        if ramGB >= 32 {
-            targetFile = "Qwen3.5-14B-Q4_K_M.gguf"
-            targetURL = "https://huggingface.co/Qwen/Qwen3.5-14B-GGUF/resolve/main/qwen3.5-14b-q4_k_m.gguf"
-        } else if ramGB >= 16 {
-            targetFile = "Qwen3.5-7B-Q4_K_M.gguf"
-            targetURL = "https://huggingface.co/Qwen/Qwen3.5-7B-GGUF/resolve/main/qwen3.5-7b-q4_k_m.gguf"
-        } else if ramGB >= 8 {
-            targetFile = "Qwen3.5-4B-Q4_K_M.gguf"
-            targetURL = "https://huggingface.co/Qwen/Qwen3.5-4B-GGUF/resolve/main/qwen3.5-4b-q4_k_m.gguf"
-        } else {
-            return // bundled 0.8B is fine
-        }
+        // Phase 1: Download small 1.5B model FAST (~1GB, ~2 min) → instant chat
+        let quickFile = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+        let quickURL = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
 
-        let destPath = modelDir.appendingPathComponent(targetFile)
-        guard !fm.fileExists(atPath: destPath.path) else {
-            print("[NOU] Optimal model already exists: \(targetFile)")
-            return
+        // Phase 2: RAM-optimal model (background, after phase 1)
+        let optimalFile: String?
+        let optimalURL: String?
+        if ramGB >= 32 {
+            optimalFile = "Qwen2.5-14B-Instruct-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf"
+        } else if ramGB >= 16 {
+            optimalFile = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+        } else if ramGB >= 8 {
+            optimalFile = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+        } else {
+            optimalFile = nil; optimalURL = nil // 1.5B is good enough
         }
 
         Task.detached {
-            // Wait for user to start chatting with bundled model first
-            try? await Task.sleep(nanoseconds: 60_000_000_000) // 60s
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            try? FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
 
-            print("[NOU] Background upgrade: downloading \(targetFile) (RAM: \(ramGB)GB)")
-            guard let url = URL(string: targetURL) else { return }
-            do {
-                let (tempURL, response) = try await URLSession.shared.download(from: url)
-                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                    print("[NOU] Download failed: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
-                    return
+            // Phase 1: quick model
+            let quickDest = modelDir.appendingPathComponent(quickFile)
+            if !FileManager.default.fileExists(atPath: quickDest.path) {
+                print("[NOU] Phase 1: downloading \(quickFile) (~1GB)...")
+                if await self.downloadFile(from: quickURL, to: quickDest) {
+                    await self.startLlamaServer(modelPath: quickDest.path)
+                    print("[NOU] Phase 1 complete — chat ready!")
                 }
-                let dest = modelDir.appendingPathComponent(targetFile)
-                try? FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
-                try FileManager.default.moveItem(at: tempURL, to: dest)
-                print("[NOU] Background upgrade complete: \(targetFile) (\(try FileManager.default.attributesOfItem(atPath: dest.path)[.size] ?? 0) bytes)")
+            }
 
-                // Restart llama-server with the better model
-                let llamaServer = "/opt/homebrew/bin/llama-server"
-                if FileManager.default.fileExists(atPath: llamaServer) {
-                    // Kill old llama-server
-                    let killP = Process()
-                    killP.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-                    killP.arguments = ["-f", "llama-server.*5021"]
-                    try? killP.run(); killP.waitUntilExit()
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-
-                    // Start with new model
-                    let p = Process()
-                    p.executableURL = URL(fileURLWithPath: llamaServer)
-                    p.arguments = ["-m", dest.path, "--port", "5021", "-ngl", "99", "--ctx-size", "4096", "--no-warmup", "-t", "4"]
-                    p.standardOutput = FileHandle.nullDevice
-                    p.standardError = FileHandle.nullDevice
-                    try? p.run()
-                    print("[NOU] Restarted llama-server with \(targetFile)")
+            // Phase 2: optimal model (if different from quick)
+            if let optFile = optimalFile, let optURL = optimalURL, optFile != quickFile {
+                let optDest = modelDir.appendingPathComponent(optFile)
+                if !FileManager.default.fileExists(atPath: optDest.path) {
+                    print("[NOU] Phase 2: downloading \(optFile) for \(ramGB)GB RAM...")
+                    if await self.downloadFile(from: optURL, to: optDest) {
+                        // Restart llama-server with better model
+                        await self.startLlamaServer(modelPath: optDest.path)
+                        // Remove quick model to save disk
+                        try? FileManager.default.removeItem(at: quickDest)
+                        print("[NOU] Phase 2 complete — upgraded to \(optFile)")
+                    }
                 }
-            } catch {
-                print("[NOU] Background upgrade failed: \(error)")
             }
         }
+    }
+
+    /// Download file using curl (progress visible, file appears immediately)
+    private func downloadFile(from urlString: String, to dest: URL) async -> Bool {
+        let curl = "/usr/bin/curl"
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: curl)
+        p.arguments = ["-fSL", "--progress-bar", "-o", dest.path, urlString]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        do {
+            try p.run()
+            p.waitUntilExit()
+            guard p.terminationStatus == 0 else {
+                print("[NOU] curl failed with status \(p.terminationStatus)")
+                return false
+            }
+            let size = (try? FileManager.default.attributesOfItem(atPath: dest.path)[.size] as? Int) ?? 0
+            print("[NOU] Downloaded: \(dest.lastPathComponent) (\(size / 1024 / 1024)MB)")
+            return true
+        } catch {
+            print("[NOU] Download error: \(error)")
+            return false
+        }
+    }
+
+    private func startLlamaServer(modelPath: String) async {
+        let llamaServer = "/opt/homebrew/bin/llama-server"
+        guard FileManager.default.fileExists(atPath: llamaServer) else {
+            print("[NOU] llama-server not found at \(llamaServer)")
+            return
+        }
+        // Kill existing
+        let kill = Process()
+        kill.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        kill.arguments = ["-f", "llama-server.*5021"]
+        kill.standardOutput = FileHandle.nullDevice; kill.standardError = FileHandle.nullDevice
+        try? kill.run(); kill.waitUntilExit()
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: llamaServer)
+        p.arguments = ["-m", modelPath, "--port", "5021", "-ngl", "99", "--ctx-size", "4096", "--no-warmup", "-t", "4"]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try? p.run()
+        print("[NOU] Started llama-server with \(URL(fileURLWithPath: modelPath).lastPathComponent)")
     }
 
     // MARK: - Auto-configure Claude Code + dev tools (first launch, no user action needed)

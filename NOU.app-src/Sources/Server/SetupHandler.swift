@@ -508,13 +508,23 @@ enum SetupHandler {
 
     /// 既存のGGUFモデルを検索（ダウンロード不要）
     static func findExistingGGUF() -> String? {
+        // First: scan NOU's own model directory for any GGUF (auto-downloaded or bundled)
+        let nouModels = "\(NSHomeDirectory())/Library/Application Support/NOU/models"
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: nouModels) {
+            // Prefer largest file (best model)
+            let ggufs = files.filter { $0.hasSuffix(".gguf") }
+                .compactMap { name -> (String, UInt64)? in
+                    let path = "\(nouModels)/\(name)"
+                    let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? UInt64) ?? 0
+                    return (path, size)
+                }
+                .sorted { $0.1 > $1.1 } // largest first
+            if let best = ggufs.first { return best.0 }
+        }
+        // Fallback: check other known locations
         let candidates = [
-            // NOU bundled model (extracted on first launch)
-            "\(NSHomeDirectory())/Library/Application Support/NOU/models/Qwen3.5-0.8B-Q4_K_M.gguf",
             "\(NSHomeDirectory())/Library/Application Support/Koe/llm-models/Qwen3-1.7B-Q4_K_M.gguf",
             "\(NSHomeDirectory())/Library/Application Support/Jan/data/models/imported/jan-nano-4b-iQ4_XS.gguf",
-            "\(NSHomeDirectory())/Library/Application Support/Jan/data/models/huggingface.co/Menlo/Jan-nano-128k-gguf/jan-nano-128k-iQ4_XS.gguf",
-            "\(NSHomeDirectory())/Library/Mobile Documents/com~apple~CloudDocs/Downloads/qwen3-1.7b-q4_0.gguf",
             ggufModelPath.path,
         ]
         return candidates.first { FileManager.default.fileExists(atPath: $0) }
