@@ -264,7 +264,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             var additions: [String] = []
             if !rcContent.contains("ANTHROPIC_BASE_URL") {
-                additions.append("export ANTHROPIC_BASE_URL=http://localhost:4001  # NOU auto-config")
+                additions.append("export ANTHROPIC_BASE_URL=http://localhost:4004  # NOU Ollama proxy")
             }
             if !rcContent.contains("ANTHROPIC_API_KEY") {
                 additions.append("export ANTHROPIC_API_KEY=sk-nou-local  # NOU auto-config")
