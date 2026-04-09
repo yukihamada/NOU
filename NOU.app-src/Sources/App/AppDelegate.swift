@@ -285,24 +285,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
 
-        // Phase 1: Download small 1.5B model FAST (~1GB, ~2 min) → instant chat
-        let quickFile = "Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
-        let quickURL = "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+        // unsloth/Qwen3 GGUFs — no HuggingFace auth required
+        // Phase 1: Download Qwen3-1.7B FAST (~1.2GB) → instant chat
+        let quickFile = "Qwen3-1.7B-Q4_K_M.gguf"
+        let quickURL = "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf"
 
         // Phase 2: RAM-optimal model (background, after phase 1)
         let optimalFile: String?
         let optimalURL: String?
         if ramGB >= 32 {
-            optimalFile = "Qwen2.5-14B-Instruct-Q4_K_M.gguf"
-            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf"
+            optimalFile = "Qwen3-14B-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/unsloth/Qwen3-14B-GGUF/resolve/main/Qwen3-14B-Q4_K_M.gguf"
         } else if ramGB >= 16 {
-            optimalFile = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
-            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+            optimalFile = "Qwen3-8B-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/unsloth/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf"
         } else if ramGB >= 8 {
-            optimalFile = "Qwen2.5-3B-Instruct-Q4_K_M.gguf"
-            optimalURL = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+            optimalFile = "Qwen3-4B-Q4_K_M.gguf"
+            optimalURL = "https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf"
         } else {
-            optimalFile = nil; optimalURL = nil // 1.5B is good enough
+            optimalFile = nil; optimalURL = nil // 1.7B is good enough
         }
 
         Task.detached {
