@@ -65,11 +65,48 @@ enum DashboardHTML {
     .tab{padding:6px 14px;border-radius:4px 4px 0 0;font-size:12px;cursor:pointer;color:var(--muted);background:none;border:none;font-weight:500}
     .tab.active{color:var(--text);background:var(--card);border:1px solid var(--border);border-bottom-color:var(--card)}
     .hidden{display:none}
+    /* ── Chat UI ── */
+    #chat-section{display:none}
+    .chat-wrap{display:flex;flex-direction:column;height:480px;background:var(--bg)}
+    .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .chat-messages::-webkit-scrollbar{width:4px}
+    .chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+    .msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;animation:msgIn .15s ease}
+    @keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:3px;box-shadow:0 2px 8px rgba(88,166,255,.2)}
+    .msg.assistant{background:var(--card);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px;color:var(--text)}
+    .msg.system-msg{background:transparent;color:var(--muted);font-size:11px;align-self:center;border:none;padding:2px 8px;letter-spacing:.01em}
+    .chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);align-items:flex-end;background:var(--card)}
+    .chat-input-row textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;resize:none;min-height:40px;max-height:120px;font-family:inherit;line-height:1.5;transition:border-color .15s}
+    .chat-input-row textarea:focus{border-color:var(--blue)}
+    .chat-input-row textarea::placeholder{color:var(--muted)}
+    .chat-send-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;width:40px;height:40px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s,transform .1s}
+    .chat-send-btn:hover{opacity:.85;transform:scale(1.04)}.chat-send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+    .chat-model-bar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);background:var(--card)}
+    .chat-model-bar select{background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:3px 7px;outline:none;cursor:pointer;transition:border-color .15s}
+    .chat-model-bar select:focus{border-color:var(--blue)}
+    .chat-tier{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+    .chat-tier.local{background:#1a3a1a;color:var(--green)}.chat-tier.remote{background:#1a2a3d;color:var(--blue)}.chat-tier.depin{background:#2a1a3d;color:var(--purple)}
+    .owui-banner{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg,#0d1f35,#0d1a2a);border-top:1px solid #1e3a5f;font-size:11px;color:#8ab4d8}
+    .owui-banner a{color:var(--blue);text-decoration:none;border:1px solid #1e3a5f;border-radius:5px;padding:3px 10px;transition:opacity .15s}
+    .owui-banner a:hover{opacity:.8}
+    .typing-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);animation:typing 1.2s infinite;margin:0 2px}
+    .typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+    @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
     </style>
     </head>
     <body>
-    <h1>🧠 NOU</h1>
-    <p class="subtitle">Local AI Inference — Apple Silicon · <span id="node-name">...</span></p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <h1 style="margin-bottom:4px">🧠 NOU</h1>
+        <p class="subtitle" style="margin:0">Local AI Proxy — Apple Silicon · <span id="node-name" style="color:var(--text);font-weight:500">...</span></p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+        <span id="header-status" style="font-size:11px;color:var(--muted)"></span>
+        <a href="http://127.0.0.1:8080" target="_blank" class="btn btn-muted" style="font-size:11px;text-decoration:none;padding:5px 12px">💬 Chat</a>
+        <button class="btn btn-muted" onclick="location.reload()" style="font-size:11px;padding:5px 10px" title="更新">↺</button>
+      </div>
+    </div>
 
     <!-- === 初回セットアップバナー === -->
     <div id="setup-banner" style="display:none;background:linear-gradient(135deg,#0d1f35,#0d1a2a);border:1px solid #1e3a5f;border-radius:12px;padding:20px 24px;margin-bottom:16px">
@@ -84,6 +121,49 @@ enum DashboardHTML {
         <!-- Steps injected by JS -->
       </div>
       <div id="setup-recommendation" style="margin-top:14px;background:#0a1a2a;border-radius:8px;padding:14px"></div>
+    </div>
+
+    <!-- === Chat UI === -->
+    <div class="section" style="padding:0;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h2 style="margin:0">💬 クイックチャット</h2>
+          <span class="chat-tier local" id="chat-tier-badge" style="display:none">● ローカル</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <a href="http://127.0.0.1:8080" target="_blank" class="btn btn-muted" style="font-size:11px;padding:4px 10px;text-decoration:none" title="Open WebUI で開く">Open WebUI ↗</a>
+          <button class="btn btn-muted" onclick="toggleChat()" id="chat-toggle-btn" style="font-size:11px;padding:4px 10px">開く</button>
+        </div>
+      </div>
+      <div id="chat-section">
+        <div class="chat-model-bar">
+          <span style="flex-shrink:0">モデル</span>
+          <select id="chat-model-sel" onchange="saveChatModel()">
+            <option value="auto">auto — 最適モデル自動選択</option>
+            <option value="gemma4">Gemma 4 31B（高品質）</option>
+            <option value="gemma4-12b">Gemma 4 12B（高速）</option>
+            <option value="gemma4-4b">Gemma 4 4B（軽量）</option>
+            <option value="qwen3.5-32b">Qwen3.5 32B</option>
+            <option value="deepseek-r1">DeepSeek-R1（推論）</option>
+          </select>
+          <span id="chat-status" style="flex:1;text-align:right;font-size:10px"></span>
+          <button class="btn btn-muted" style="font-size:10px;padding:3px 9px;flex-shrink:0" onclick="clearChat()">クリア</button>
+        </div>
+        <div class="chat-wrap">
+          <div class="chat-messages" id="chat-messages">
+            <div class="msg system-msg">NOU に接続されています。何でも聞いてください。</div>
+          </div>
+          <div class="chat-input-row">
+            <textarea id="chat-input" placeholder="メッセージを入力... (Shift+Enter で送信)" rows="1"
+              oninput="autoResize(this)" onkeydown="chatKeydown(event)"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()" title="送信 (Shift+Enter)">↑</button>
+          </div>
+        </div>
+        <div class="owui-banner">
+          <span>より多機能なチャットは Open WebUI で</span>
+          <a href="http://127.0.0.1:8080" target="_blank">Open WebUI を開く →</a>
+        </div>
+      </div>
     </div>
 
     <!-- === リアルタイム統計 === -->
@@ -106,6 +186,10 @@ enum DashboardHTML {
         <div class="stat-box">
           <div class="stat-val" id="stat-uptime">—</div>
           <div class="stat-label">uptime</div>
+        </div>
+        <div class="stat-box" style="cursor:pointer" onclick="document.getElementById('network-nodes-section').scrollIntoView({behavior:'smooth'})">
+          <div class="stat-val" id="stat-network-nodes" style="color:var(--green)">—</div>
+          <div class="stat-label">🌐 network nodes</div>
         </div>
       </div>
       <div class="status-footer">
@@ -141,8 +225,8 @@ enum DashboardHTML {
     </div>
 
     <!-- === ネットワークノード (mesh-llm相当) === -->
-    <div class="section">
-      <h2>メッシュネットワーク</h2>
+    <div class="section" id="network-nodes-section">
+      <h2>メッシュネットワーク <span id="relay-node-badge" style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px"></span></h2>
       <div id="network-nodes"><div style="color:var(--muted);padding:8px;font-size:12px">Searching...</div></div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <input type="text" id="wan-url-input" placeholder="http://192.168.x.x:4001  または tunnel URL" style="width:280px">
@@ -377,6 +461,138 @@ enum DashboardHTML {
       <div id="bb-list"><div style="color:var(--muted);font-size:12px">読み込み中...</div></div>
     </div>
 
+    <!-- === クラウドGPUデプロイ === -->
+    <div class="section" id="cloud-deploy-section" style="border:1px solid rgba(63,185,80,.25);background:rgba(63,185,80,.03)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+        <h2>☁️ クラウドGPUデプロイ <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(63,185,80,.2);color:#3fb950;font-weight:600">vllm 高速推論</span></h2>
+        <button onclick="toggleCloudSetup()" id="cloud-setup-toggle" style="font-size:11px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:3px 10px;cursor:pointer">⚙ APIキー設定</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">RunPod / Lambda のGPUにNOUをワンクリックデプロイ。<strong>vllm + AWQ量子化</strong>で超高速推論。Mac から透過的に使えます。</p>
+
+      <!-- APIキー設定パネル (折りたたみ) -->
+      <div id="cloud-setup-panel" style="display:none;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--muted)">API キー設定</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--muted);width:130px;flex-shrink:0">RunPod API Key</label>
+            <input id="inp-runpod-key" type="password" placeholder="xxxxxxxxxxxxxxxx" style="flex:1;background:#161b22;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 8px;font-size:11px">
+            <span id="runpod-key-status" style="font-size:10px;white-space:nowrap"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--muted);width:130px;flex-shrink:0">Lambda Labs Key</label>
+            <input id="inp-lambda-key" type="password" placeholder="xxxxxxxxxxxxxxxx" style="flex:1;background:#161b22;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 8px;font-size:11px">
+            <span id="lambda-key-status" style="font-size:10px;white-space:nowrap"></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="font-size:11px;color:var(--muted);width:130px;flex-shrink:0">Solanaウォレット</label>
+            <input id="inp-wallet" type="text" placeholder="DePIN報酬先（省略可）" style="flex:1;background:#161b22;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 8px;font-size:11px">
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-blue" onclick="saveCloudKeys()" style="font-size:11px">保存・確認</button>
+            <a href="https://www.runpod.io/console/user/settings" target="_blank" style="font-size:10px;color:var(--muted);display:flex;align-items:center">RunPodでキー取得 →</a>
+          </div>
+          <div id="cloud-keys-msg" style="font-size:11px;display:none;margin-top:2px"></div>
+        </div>
+      </div>
+
+      <!-- Deploy cards -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+
+        <!-- RunPod -->
+        <div style="flex:1;min-width:210px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:20px">🎮</span>
+            <div>
+              <div style="font-size:13px;font-weight:700">RunPod</div>
+              <div style="font-size:10px;color:var(--muted)">オンデマンドGPU</div>
+            </div>
+            <span style="margin-left:auto;font-size:10px;padding:2px 6px;border-radius:8px;background:rgba(63,185,80,.15);color:#3fb950">★ 推奨</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+            <div>
+              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">GPU</label>
+              <select id="rp-gpu" onchange="rpUpdateCost()" style="width:100%;background:#0d1117;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 6px;font-size:11px">
+                <option value="NVIDIA RTX 4090" data-cost="0.74" data-model="Qwen/Qwen2.5-14B-Instruct-AWQ" data-vram="24">RTX 4090 · 24GB</option>
+                <option value="NVIDIA A40" data-cost="0.76" data-model="Qwen/Qwen2.5-32B-Instruct-AWQ" data-vram="48">A40 · 48GB</option>
+                <option value="NVIDIA A100 80GB PCIe" data-cost="1.99" data-model="Qwen/Qwen2.5-72B-Instruct-AWQ" data-vram="80" selected>A100 80G · 80GB ★</option>
+                <option value="NVIDIA H100 80GB HBM3" data-cost="2.49" data-model="Qwen/Qwen2.5-72B-Instruct-AWQ" data-vram="80">H100 · 80GB ⚡最速</option>
+              </select>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+              <span style="color:var(--muted)">推奨モデル</span>
+              <span id="rp-model-label" style="color:var(--blue);font-family:monospace;font-size:10px">Qwen2.5-72B-AWQ</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+              <span style="color:var(--muted)">コスト</span>
+              <span id="rp-cost-label" style="color:var(--yellow);font-weight:600">$1.99/時間</span>
+            </div>
+          </div>
+          <button id="btn-rp-deploy" class="btn btn-green" onclick="deployToRunPod()" style="width:100%;font-size:12px;font-weight:700">
+            ⚡ RunPod にデプロイ
+          </button>
+          <div id="rp-progress" style="display:none;margin-top:8px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px" id="rp-status-text">Pod 作成中...</div>
+            <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div id="rp-progress-bar" style="height:100%;background:linear-gradient(90deg,#3fb950,#58a6ff);width:0%;transition:width 1s"></div>
+            </div>
+          </div>
+          <div id="rp-result" style="display:none;margin-top:8px;font-size:11px"></div>
+        </div>
+
+        <!-- Lambda Labs -->
+        <div style="flex:1;min-width:210px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:20px">λ</span>
+            <div>
+              <div style="font-size:13px;font-weight:700">Lambda Labs</div>
+              <div style="font-size:10px;color:var(--muted)">低コスト GPU</div>
+            </div>
+            <span style="margin-left:auto;font-size:10px;padding:2px 6px;border-radius:8px;background:rgba(88,166,255,.15);color:#58a6ff">低コスト</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+            <div>
+              <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:2px">インスタンス</label>
+              <select id="lb-type" onchange="lbUpdateCost()" style="width:100%;background:#0d1117;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 6px;font-size:11px">
+                <option value="gpu_1x_a10" data-cost="0.60" data-model="Qwen/Qwen2.5-7B-Instruct-AWQ">1x A10 · 24GB · $0.60/hr</option>
+                <option value="gpu_1x_a100_sxm4" data-cost="1.29" data-model="Qwen/Qwen2.5-32B-Instruct-AWQ" selected>1x A100 SXM4 · 40GB · $1.29/hr</option>
+                <option value="gpu_1x_h100_pcie" data-cost="2.49" data-model="Qwen/Qwen2.5-72B-Instruct-AWQ">1x H100 · 80GB · $2.49/hr</option>
+              </select>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+              <span style="color:var(--muted)">推奨モデル</span>
+              <span id="lb-model-label" style="color:var(--blue);font-family:monospace;font-size:10px">Qwen2.5-32B-AWQ</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+              <span style="color:var(--muted)">コスト</span>
+              <span id="lb-cost-label" style="color:var(--yellow);font-weight:600">$1.29/時間</span>
+            </div>
+          </div>
+          <button id="btn-lb-deploy" class="btn btn-blue" onclick="deployToLambda()" style="width:100%;font-size:12px;font-weight:700">
+            ⚡ Lambda にデプロイ
+          </button>
+          <div id="lb-progress" style="display:none;margin-top:8px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px" id="lb-status-text">インスタンス作成中...</div>
+            <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+              <div id="lb-progress-bar" style="height:100%;background:linear-gradient(90deg,#58a6ff,#3fb950);width:0%;transition:width 1s"></div>
+            </div>
+          </div>
+          <div id="lb-result" style="display:none;margin-top:8px;font-size:11px"></div>
+        </div>
+      </div>
+
+      <!-- 稼働中インスタンス一覧 -->
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600">稼働中のリモートノード</div>
+          <button class="btn btn-muted" onclick="loadCloudInstances()" style="font-size:10px;padding:2px 8px">🔄 更新</button>
+        </div>
+        <div id="cloud-instances-list"><span style="color:var(--muted);font-size:11px">読み込み中...</span></div>
+        <div style="margin-top:8px;padding:6px 10px;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);border-radius:6px;font-size:10px;color:#f85149">
+          ⚠️ 使い終わったら必ず停止してください（課金が継続します）
+        </div>
+      </div>
+    </div>
+
     <!-- === 設定・ベータ機能 === -->
     <div class="section" id="settings-section">
       <h2>⚙️ 設定・ベータ機能</h2>
@@ -392,15 +608,58 @@ enum DashboardHTML {
     </div>
 
     <!-- === 接続情報 === -->
+    <!-- === ワンクリック接続 === -->
+    <div class="section" style="border:1px solid rgba(88,166,255,.25);background:rgba(88,166,255,.04)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <h2 style="margin-bottom:2px">ワンクリック接続</h2>
+          <p style="font-size:11px;color:var(--muted)">クリックするとフォルダ選択→ターミナルで起動</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;color:var(--muted)">ターミナル:</label>
+          <select id="terminal-select" onchange="saveTerminal(this.value)"
+            style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:4px 8px;cursor:pointer">
+            <option value="">読み込み中...</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <div style="flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Claude Code</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">設定して自動起動</div>
+          <button id="btn-setup-claude" class="btn btn-blue" onclick="setupTool('claudecode','btn-setup-claude')" style="width:100%;font-size:12px">
+            ▶ 接続して起動
+          </button>
+          <div id="msg-claudecode" style="font-size:10px;margin-top:6px;color:var(--green);display:none"></div>
+        </div>
+        <div style="flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Aider</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">設定して自動起動</div>
+          <button id="btn-setup-aider" class="btn btn-blue" onclick="setupTool('aider','btn-setup-aider')" style="width:100%;font-size:12px">
+            ▶ 接続して起動
+          </button>
+          <div id="msg-aider" style="font-size:10px;margin-top:6px;color:var(--green);display:none"></div>
+        </div>
+        <div style="flex:1;min-width:180px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">Cursor</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:10px">設定して自動起動</div>
+          <button id="btn-setup-cursor" class="btn btn-blue" onclick="setupTool('cursor','btn-setup-cursor')" style="width:100%;font-size:12px">
+            ▶ 接続して起動
+          </button>
+          <div id="msg-cursor" style="font-size:10px;margin-top:6px;color:var(--green);display:none"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid2">
       <div class="section">
-        <h2>Claude Code</h2>
+        <h2>Claude Code <span style="font-size:10px;color:var(--muted);font-weight:400">(手動設定)</span></h2>
         <div class="code" id="claude-code-snippet">読み込み中...
           <button class="copy-btn" onclick="copyEl('claude-code-snippet')">コピー</button>
         </div>
       </div>
       <div class="section">
-        <h2>Aider / OpenAI 互換</h2>
+        <h2>Aider / OpenAI 互換 <span style="font-size:10px;color:var(--muted);font-weight:400">(手動設定)</span></h2>
         <div class="code" id="aider-snippet">読み込み中...
           <button class="copy-btn" onclick="copyEl('aider-snippet')">コピー</button>
         </div>
@@ -485,6 +744,58 @@ enum DashboardHTML {
     function fmtDate(ts) {
       return new Date(ts * 1000).toLocaleTimeString();
     }
+    // ======= ターミナル設定 =======
+    async function loadTerminalSettings() {
+      try {
+        const r = await fetch(BASE + '/api/settings');
+        const d = await r.json();
+        const sel = document.getElementById('terminal-select');
+        if (!sel) return;
+        sel.innerHTML = '';
+        (d.terminals || []).forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id; opt.textContent = t.name;
+          if (t.id === d.terminal) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        if (!d.terminals || d.terminals.length === 0) {
+          sel.innerHTML = '<option value="terminal">Terminal</option>';
+        }
+      } catch(e) {}
+    }
+    async function saveTerminal(id) {
+      await fetch(BASE + '/api/settings', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({terminal: id})
+      });
+    }
+    // ======= ワンクリック接続 =======
+    async function setupTool(tool, btnId) {
+      const btn = document.getElementById(btnId);
+      const msgId = 'msg-' + tool;
+      const msg = document.getElementById(msgId);
+      btn.disabled = true;
+      btn.textContent = '設定中...';
+      try {
+        const r = await fetch(BASE + '/api/setup/' + tool, { method: 'POST' });
+        const d = await r.json();
+        if (d.ok) {
+          btn.textContent = '✓ 設定済み';
+          btn.className = 'btn btn-green';
+          if (msg) { msg.textContent = d.message || '完了'; msg.style.display = ''; }
+        } else {
+          btn.textContent = '⚠ 失敗';
+          btn.disabled = false;
+          if (msg) { msg.textContent = d.message || '失敗しました'; msg.style.color = 'var(--yellow)'; msg.style.display = ''; }
+        }
+      } catch(e) {
+        btn.textContent = '再試行';
+        btn.disabled = false;
+        if (msg) { msg.textContent = 'エラー: ' + e.message; msg.style.color = 'var(--yellow)'; msg.style.display = ''; }
+      }
+    }
+
     function copyEl(id) {
       const el = document.getElementById(id);
       const text = el.innerText.replace(/コピー$/, '').trim();
@@ -600,7 +911,7 @@ enum DashboardHTML {
           `export ANTHROPIC_BASE_URL=http://${IP}:4001\nexport ANTHROPIC_API_KEY=sk-ant-dummy\nclaude --dangerously-skip-permissions` +
           `\n<button class="copy-btn" onclick="copyEl('claude-code-snippet')">コピー</button>`;
         document.getElementById('aider-snippet').innerHTML =
-          `OPENAI_API_BASE=http://${IP}:4001/v1 \\\nOPENAI_API_KEY=sk-dummy \\\naider --model openai/qwen3.5-122b` +
+          `OPENAI_API_BASE=http://${IP}:4001/v1 \\\nOPENAI_API_KEY=sk-dummy \\\naider --model openai/gemma4` +
           `\n<button class="copy-btn" onclick="copyEl('aider-snippet')">コピー</button>`;
 
         // アイドル状態
@@ -712,10 +1023,10 @@ enum DashboardHTML {
 
     // ======= 初回セットアップバナー =======
     function modelForRam(gb) {
-      if (gb >= 64) return {name:'Qwen3-32B', id:'mlx-community/Qwen3-32B-4bit', note:'高精度・最大モデル'};
-      if (gb >= 32) return {name:'Qwen3-14B', id:'mlx-community/Qwen3-14B-4bit', note:'精度と速度のバランス'};
-      if (gb >= 16) return {name:'Qwen3-8B',  id:'mlx-community/Qwen3-8B-4bit',  note:'16GB Macに最適 ✨'};
-      return             {name:'Qwen3-4B',  id:'mlx-community/Qwen3-4B-4bit',  note:'8GB Mac向け、高速'};
+      if (gb >= 64) return {name:'Gemma 4 31B', id:'mlx-community/gemma-4-31b-it-4bit', note:'高精度・最大モデル'};
+      if (gb >= 32) return {name:'Gemma 4 12B', id:'mlx-community/gemma-4-12b-it-4bit', note:'精度と速度のバランス'};
+      if (gb >= 16) return {name:'Gemma 4 4B',  id:'mlx-community/gemma-4-4b-it-4bit',  note:'16GB Macに最適 ✨'};
+      return             {name:'Gemma 4 2B',  id:'mlx-community/gemma-4-2b-it-4bit',  note:'8GB Mac向け、超高速'};
     }
 
     function updateSetupBanner(health) {
@@ -779,6 +1090,26 @@ enum DashboardHTML {
     }
 
     // ======= Network Nodes (10s) =======
+    async function refreshRelayNodeCount() {
+      try {
+        const d = await fetch('https://nou.run/api/status').then(r=>r.json());
+        const cnt = d.node_count ?? (d.nodes?.length ?? 0);
+        const statEl = document.getElementById('stat-network-nodes');
+        if (statEl) {
+          statEl.textContent = cnt;
+          statEl.style.color = cnt > 0 ? 'var(--green)' : 'var(--muted)';
+        }
+        const badge = document.getElementById('relay-node-badge');
+        if (badge) {
+          badge.textContent = `nou.run: ${cnt} 台オンライン`;
+          badge.style.color = cnt > 0 ? 'var(--green)' : 'var(--muted)';
+        }
+      } catch(e) {
+        const statEl = document.getElementById('stat-network-nodes');
+        if (statEl) statEl.textContent = '—';
+      }
+    }
+
     async function refreshNodes() {
       try {
         const nodes = await fetch(BASE+'/api/nodes').then(r=>r.json()).catch(()=>[]);
@@ -1163,12 +1494,476 @@ enum DashboardHTML {
       }
     })();
 
+    // ======= Chat UI =======
+    const BASE_URL = window.location.origin;  // works for both localhost and chatweb.ai relay
+    let chatHistory = [];
+    let chatIsStreaming = false;
+
+    function toggleChat() {
+      const sec = document.getElementById('chat-section');
+      const btn = document.getElementById('chat-toggle-btn');
+      const open = sec.style.display === 'none' || sec.style.display === '';
+      sec.style.display = open ? 'block' : 'none';
+      btn.textContent = open ? '閉じる' : '開く';
+      if (open) document.getElementById('chat-input').focus();
+      localStorage.setItem('nou.chat.open', open ? '1' : '0');
+    }
+
+    function saveChatModel() {
+      localStorage.setItem('nou.chat.model', document.getElementById('chat-model-sel').value);
+    }
+
+    function clearChat() {
+      chatHistory = [];
+      const msgs = document.getElementById('chat-messages');
+      msgs.innerHTML = '<div class="msg system-msg">チャットをクリアしました。</div>';
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    function chatKeydown(e) {
+      if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    }
+
+    function appendMsg(role, text) {
+      const msgs = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      div.dataset.role = role;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      return div;
+    }
+
+    async function sendChatMessage() {
+      if (chatIsStreaming) return;
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = ''; input.style.height = 'auto';
+
+      const model = document.getElementById('chat-model-sel').value;
+      chatHistory.push({ role: 'user', content: text });
+      appendMsg('user', text);
+
+      // typing indicator
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'msg assistant';
+      typingDiv.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+      document.getElementById('chat-messages').appendChild(typingDiv);
+      document.getElementById('chat-messages').scrollTop = 99999;
+
+      const btn = document.getElementById('chat-send-btn');
+      btn.disabled = true; chatIsStreaming = true;
+      document.getElementById('chat-status').textContent = '⏳ 生成中...';
+
+      try {
+        // Try ProxyHandler first, fallback to llama-server (5021) if ProxyHandler returns 500
+        let resp = await fetch(BASE_URL + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer sk-nou' },
+          body: JSON.stringify({ model, messages: chatHistory, stream: true })
+        });
+        if (!resp.ok) {
+          // Fallback: try llama-server directly (auto-started with bundled model)
+          resp = await fetch('http://127.0.0.1:5021/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, messages: chatHistory, stream: true })
+          });
+        }
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+        typingDiv.textContent = '';
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let full = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = dec.decode(value, { stream: true });
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
+            try {
+              const j = JSON.parse(data);
+              const delta = j.choices?.[0]?.delta?.content ?? '';
+              if (delta) { full += delta; typingDiv.textContent = full; }
+            } catch {}
+            document.getElementById('chat-messages').scrollTop = 99999;
+          }
+        }
+        chatHistory.push({ role: 'assistant', content: full });
+        document.getElementById('chat-status').textContent = '';
+      } catch(e) {
+        typingDiv.className = 'msg system-msg';
+        typingDiv.textContent = '❌ エラー: ' + e.message;
+        document.getElementById('chat-status').textContent = '';
+      }
+      btn.disabled = false; chatIsStreaming = false;
+    }
+
+    // Restore chat state
+    (function() {
+      const saved = localStorage.getItem('nou.chat.model');
+      if (saved) { const sel = document.getElementById('chat-model-sel'); if ([...sel.options].find(o=>o.value===saved)) sel.value = saved; }
+      if (localStorage.getItem('nou.chat.open') === '1') toggleChat();
+    })();
+
+    // ======= Cloud GPU Deploy =======
+
+    // Toggle API key setup panel
+    function toggleCloudSetup() {
+      const p = document.getElementById('cloud-setup-panel');
+      const btn = document.getElementById('cloud-setup-toggle');
+      const open = p.style.display === 'none';
+      p.style.display = open ? 'block' : 'none';
+      btn.textContent = open ? '✕ 閉じる' : '⚙ APIキー設定';
+      if (open) loadCloudStatus();
+    }
+
+    async function loadCloudStatus() {
+      try {
+        const r = await fetch(BASE + '/api/cloud/status', { signal: AbortSignal.timeout(4000) });
+        const d = await r.json();
+        const rp = d.runpod || {};
+        const lb = d.lambda || {};
+        document.getElementById('runpod-key-status').innerHTML =
+          rp.configured ? '<span style="color:#3fb950">✓ 設定済み</span>' : '<span style="color:var(--muted)">未設定</span>';
+        document.getElementById('lambda-key-status').innerHTML =
+          lb.configured ? '<span style="color:#3fb950">✓ 設定済み</span>' : '<span style="color:var(--muted)">未設定</span>';
+        if (d.wallet) document.getElementById('inp-wallet').placeholder = d.wallet.slice(0,8) + '...';
+      } catch(e) {}
+    }
+
+    async function saveCloudKeys() {
+      const msg = document.getElementById('cloud-keys-msg');
+      msg.style.display = 'block';
+      msg.innerHTML = '<span style="color:var(--muted)">保存・検証中...</span>';
+      try {
+        const body = {
+          runpod_key: document.getElementById('inp-runpod-key').value.trim(),
+          lambda_key:  document.getElementById('inp-lambda-key').value.trim(),
+          wallet:      document.getElementById('inp-wallet').value.trim(),
+        };
+        const r = await fetch(BASE + '/api/cloud/keys', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body), signal: AbortSignal.timeout(15000)
+        });
+        const d = await r.json();
+        if (d.error) { msg.innerHTML = `<span style="color:#f85149">❌ ${d.error}</span>`; return; }
+
+        let html = '<span style="color:#3fb950">✓ 保存しました</span>';
+        if (d.runpod_valid === true)  html += ' · RunPod ✓';
+        if (d.runpod_valid === false) html += ' · <span style="color:#f85149">RunPod キーが無効</span>';
+        msg.innerHTML = html;
+        await loadCloudStatus();
+        document.getElementById('inp-runpod-key').value = '';
+        document.getElementById('inp-lambda-key').value = '';
+        loadCloudInstances();
+      } catch(e) {
+        msg.innerHTML = `<span style="color:#f85149">エラー: ${e.message}</span>`;
+      }
+    }
+
+    // GPU/instance selectors → update cost & model labels
+    const RP_MODELS = {
+      'NVIDIA RTX 4090': { cost:'$0.74/時間', model:'Qwen2.5-14B-AWQ' },
+      'NVIDIA A40':      { cost:'$0.76/時間', model:'Qwen2.5-32B-AWQ' },
+      'NVIDIA A100 80GB PCIe': { cost:'$1.99/時間', model:'Qwen2.5-72B-AWQ' },
+      'NVIDIA H100 80GB HBM3': { cost:'$2.49/時間', model:'Qwen2.5-72B-AWQ ⚡' },
+    };
+    const LB_MODELS = {
+      'gpu_1x_a10':        { cost:'$0.60/時間', model:'Qwen2.5-7B-AWQ' },
+      'gpu_1x_a100_sxm4':  { cost:'$1.29/時間', model:'Qwen2.5-32B-AWQ' },
+      'gpu_1x_h100_pcie':  { cost:'$2.49/時間', model:'Qwen2.5-72B-AWQ' },
+    };
+    function rpUpdateCost() {
+      const v = document.getElementById('rp-gpu').value;
+      const info = RP_MODELS[v] || {};
+      document.getElementById('rp-cost-label').textContent  = info.cost  || '';
+      document.getElementById('rp-model-label').textContent = info.model || '';
+    }
+    function lbUpdateCost() {
+      const v = document.getElementById('lb-type').value;
+      const info = LB_MODELS[v] || {};
+      document.getElementById('lb-cost-label').textContent  = info.cost  || '';
+      document.getElementById('lb-model-label').textContent = info.model || '';
+    }
+
+    // ── RunPod one-click deploy ──
+    async function deployToRunPod() {
+      const btn = document.getElementById('btn-rp-deploy');
+      const prog = document.getElementById('rp-progress');
+      const bar  = document.getElementById('rp-progress-bar');
+      const statusTxt = document.getElementById('rp-status-text');
+      const result = document.getElementById('rp-result');
+
+      const gpuSel = document.getElementById('rp-gpu');
+      const gpu    = gpuSel.value;
+      const opt    = gpuSel.options[gpuSel.selectedIndex];
+      const model  = opt.dataset.model || 'Qwen/Qwen2.5-72B-Instruct-AWQ';
+
+      btn.disabled = true; btn.textContent = '⏳ デプロイ中...';
+      prog.style.display = 'block'; result.style.display = 'none';
+      bar.style.width = '10%'; statusTxt.textContent = 'RunPod API 呼び出し中...';
+
+      try {
+        const r = await fetch(BASE + '/api/cloud/runpod/deploy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ gpu_type: gpu, model: model, label: 'NOU RunPod GPU', backend: 'vllm' }),
+          signal: AbortSignal.timeout(30000)
+        });
+        const d = await r.json();
+
+        if (d.error) {
+          result.style.display = 'block';
+          result.innerHTML = `<span style="color:#f85149">❌ ${d.error}</span>`;
+          prog.style.display = 'none';
+          btn.disabled = false; btn.textContent = '⚡ RunPod にデプロイ';
+          return;
+        }
+
+        bar.style.width = '40%'; statusTxt.textContent = 'Pod 作成完了。vllm セットアップ中（5〜10分）...';
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="color:#3fb950;margin-bottom:4px">✓ ${d.message||'Pod 作成完了'}</div>
+          ${d.pod_id ? `<div style="font-size:10px;color:var(--muted)">Pod ID: ${d.pod_id}</div>` : ''}
+          ${d.dashboard_url ? `<a href="${d.dashboard_url}" target="_blank" style="font-size:10px;color:var(--blue)">RunPod コンソール →</a>` : ''}`;
+
+        // Poll for relay connection (NOU node appearing)
+        pollForNode(d.pod_id || '', bar, statusTxt, btn);
+
+      } catch(e) {
+        result.style.display = 'block';
+        if (e.name === 'TimeoutError' || e.message.includes('timeout')) {
+          result.innerHTML = '<span style="color:#e3b341">⚠️ APIキーが設定されていません。「⚙ APIキー設定」からRunPod APIキーを入力してください。</span>';
+        } else {
+          result.innerHTML = `<span style="color:#f85149">❌ ${e.message}</span>`;
+        }
+        prog.style.display = 'none';
+        btn.disabled = false; btn.textContent = '⚡ RunPod にデプロイ';
+      }
+    }
+
+    // ── Lambda one-click deploy ──
+    async function deployToLambda() {
+      const btn = document.getElementById('btn-lb-deploy');
+      const prog = document.getElementById('lb-progress');
+      const bar  = document.getElementById('lb-progress-bar');
+      const statusTxt = document.getElementById('lb-status-text');
+      const result = document.getElementById('lb-result');
+
+      const typeSel = document.getElementById('lb-type');
+      const instType = typeSel.value;
+      const opt = typeSel.options[typeSel.selectedIndex];
+      const model = opt.dataset.model || 'Qwen/Qwen2.5-32B-Instruct-AWQ';
+
+      btn.disabled = true; btn.textContent = '⏳ デプロイ中...';
+      prog.style.display = 'block'; result.style.display = 'none';
+      bar.style.width = '10%'; statusTxt.textContent = 'Lambda API 呼び出し中...';
+
+      try {
+        const r = await fetch(BASE + '/api/cloud/lambda/deploy', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ instance_type: instType, model: model, label: 'NOU Lambda GPU', backend: 'vllm' }),
+          signal: AbortSignal.timeout(30000)
+        });
+        const d = await r.json();
+
+        if (d.error) {
+          result.style.display = 'block';
+          result.innerHTML = `<span style="color:#f85149">❌ ${d.error}</span>`;
+          prog.style.display = 'none';
+          btn.disabled = false; btn.textContent = '⚡ Lambda にデプロイ';
+          return;
+        }
+
+        bar.style.width = '40%'; statusTxt.textContent = 'インスタンス作成完了。セットアップ中...';
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="color:#3fb950;margin-bottom:4px">✓ ${d.message||'インスタンス作成完了'}</div>
+          ${d.instance_id ? `<div style="font-size:10px;color:var(--muted)">ID: ${d.instance_id}</div>` : ''}
+          ${d.dashboard_url ? `<a href="${d.dashboard_url}" target="_blank" style="font-size:10px;color:var(--blue)">Lambda コンソール →</a>` : ''}`;
+
+        pollForNode('', bar, statusTxt, btn);
+
+      } catch(e) {
+        result.style.display = 'block';
+        if (e.name === 'TimeoutError' || e.message.includes('timeout')) {
+          result.innerHTML = '<span style="color:#e3b341">⚠️ APIキーが設定されていません。「⚙ APIキー設定」からLambda APIキーを入力してください。</span>';
+        } else {
+          result.innerHTML = `<span style="color:#f85149">❌ ${e.message}</span>`;
+        }
+        prog.style.display = 'none';
+        btn.disabled = false; btn.textContent = '⚡ Lambda にデプロイ';
+      }
+    }
+
+    // Poll /api/nodes until the new node appears (relay connected)
+    async function pollForNode(podID, bar, statusTxt, btn) {
+      const start = Date.now();
+      const MAX_MS = 15 * 60 * 1000; // 15min
+      let pct = 40;
+      const interval = setInterval(async () => {
+        pct = Math.min(pct + 2, 90);
+        bar.style.width = pct + '%';
+        const elapsed = Math.floor((Date.now() - start) / 1000);
+        const min = Math.floor(elapsed / 60), sec = elapsed % 60;
+        statusTxt.textContent = `vllm セットアップ中... ${min}分${sec}秒経過`;
+
+        if (Date.now() - start > MAX_MS) {
+          clearInterval(interval);
+          bar.style.width = '100%';
+          statusTxt.textContent = 'セットアップ完了（ノードを確認してください）';
+          btn.disabled = false; btn.textContent = '⚡ RunPod にデプロイ';
+          loadCloudInstances();
+          return;
+        }
+
+        try {
+          const r = await fetch(BASE + '/api/nodes', { signal: AbortSignal.timeout(3000) });
+          const nodes = await r.json();
+          if (nodes && nodes.length > 0) {
+            clearInterval(interval);
+            bar.style.width = '100%';
+            statusTxt.innerHTML = `<span style="color:#3fb950">✓ ノード接続完了！</span>`;
+            btn.disabled = false; btn.textContent = '⚡ RunPod にデプロイ';
+            loadCloudInstances();
+          }
+        } catch(e) {}
+      }, 10000);
+    }
+
+    // ── 稼働中インスタンス一覧 ──
+    async function loadCloudInstances() {
+      const el = document.getElementById('cloud-instances-list');
+
+      // First check relay nodes (all connected, any provider)
+      let relayNodes = [];
+      try {
+        const r = await fetch(BASE + '/api/nodes', { signal: AbortSignal.timeout(4000) });
+        relayNodes = await r.json() || [];
+      } catch(e) {}
+
+      // Also check RunPod pods (if API key set)
+      let rpPods = [];
+      try {
+        const r = await fetch(BASE + '/api/cloud/runpod/pods', { signal: AbortSignal.timeout(8000) });
+        const d = await r.json();
+        rpPods = d.pods || [];
+      } catch(e) {}
+
+      // Also check Lambda instances (if API key set)
+      let lbInstances = [];
+      try {
+        const r = await fetch(BASE + '/api/cloud/lambda/instances', { signal: AbortSignal.timeout(8000) });
+        const d = await r.json();
+        lbInstances = d.instances || [];
+      } catch(e) {}
+
+      const lines = [];
+
+      // Relay nodes (actively connected)
+      relayNodes.forEach(n => {
+        lines.push(`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0d1117;border:1px solid rgba(63,185,80,.2);border-radius:7px;margin-bottom:5px">
+            <span style="color:#3fb950;font-size:16px">●</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600">${n.label||n.node_id||'Remote Node'}</div>
+              <div style="font-size:10px;color:var(--muted);word-break:break-all">${n.public_url||''}</div>
+            </div>
+            <div style="display:flex;gap:5px;flex-shrink:0">
+              <button class="btn btn-blue" style="font-size:10px;padding:2px 7px"
+                onclick="connectCloudNode('${n.public_url||''}')">Claude接続</button>
+              <button class="btn btn-muted" style="font-size:10px;padding:2px 7px"
+                onclick="navigator.clipboard.writeText('${n.public_url||''}')">URLコピー</button>
+            </div>
+          </div>`);
+      });
+
+      // RunPod pods not yet in relay (setup in progress)
+      rpPods.filter(p => p.desiredStatus !== 'EXITED').forEach(p => {
+        const isConnected = relayNodes.some(n => n.label && n.label.includes(p.name || ''));
+        if (!isConnected) {
+          lines.push(`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0d1117;border:1px solid rgba(227,179,65,.2);border-radius:7px;margin-bottom:5px">
+              <span style="color:#e3b341;font-size:16px">◌</span>
+              <div style="flex:1">
+                <div style="font-size:12px;font-weight:600">${p.name||'RunPod Pod'} <span style="font-size:10px;color:#e3b341">セットアップ中</span></div>
+                <div style="font-size:10px;color:var(--muted)">ID: ${p.id||''} · ${p.machine?.gpuTypeId||''}</div>
+              </div>
+              <button class="btn btn-muted" style="font-size:10px;padding:2px 7px;color:#f85149;border-color:rgba(248,81,73,.3)"
+                onclick="stopRunPod('${p.id||''}')">■ 停止</button>
+            </div>`);
+        }
+      });
+
+      // Lambda instances
+      lbInstances.filter(i => i.status !== 'terminated').forEach(i => {
+        const isConnected = relayNodes.some(n => n.label && n.label.includes(i.name || ''));
+        const color = isConnected ? '#3fb950' : '#e3b341';
+        const statusText = isConnected ? '接続済み' : (i.status || 'セットアップ中');
+        lines.push(`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#0d1117;border:1px solid rgba(88,166,255,.15);border-radius:7px;margin-bottom:5px">
+            <span style="color:${color};font-size:16px">λ</span>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600">${i.name||'Lambda Instance'} <span style="font-size:10px;color:${color}">${statusText}</span></div>
+              <div style="font-size:10px;color:var(--muted)">${i.instance_type?.name||''} · ${i.ip||''}</div>
+            </div>
+            <button class="btn btn-muted" style="font-size:10px;padding:2px 7px;color:#f85149;border-color:rgba(248,81,73,.3)"
+              onclick="stopLambda('${i.id||''}')">■ 停止</button>
+          </div>`);
+      });
+
+      el.innerHTML = lines.length
+        ? lines.join('')
+        : '<span style="color:var(--muted);font-size:11px">稼働中のリモートノードはありません。上のボタンでデプロイしてください。</span>';
+    }
+
+    function connectCloudNode(url) {
+      if (!url) return;
+      navigator.clipboard.writeText(`ANTHROPIC_BASE_URL=${url}\nANTHROPIC_API_KEY=sk-dummy`);
+      alert(`クリップボードにコピーしました:\nANTHROPIC_BASE_URL=${url}\nANTHROPIC_API_KEY=sk-dummy\n\nターミナルで export して claude を実行してください。`);
+    }
+
+    async function stopRunPod(podID) {
+      if (!podID || !confirm(`RunPod Pod ${podID} を停止しますか？`)) return;
+      await fetch(BASE + '/api/cloud/runpod/stop', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ pod_id: podID })
+      });
+      setTimeout(loadCloudInstances, 2000);
+    }
+
+    async function stopLambda(instanceID) {
+      if (!instanceID || !confirm(`Lambda インスタンス ${instanceID} を終了しますか？`)) return;
+      await fetch(BASE + '/api/cloud/lambda/stop', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ instance_id: instanceID })
+      });
+      setTimeout(loadCloudInstances, 2000);
+    }
+
+    function loadRemoteNodes() { loadCloudInstances(); }
+
+    loadCloudInstances();
+
     // ======= Init & intervals =======
     initAutoRelay();
+    loadTerminalSettings();
     refresh();
     setInterval(refresh, 5000);
     refreshDepin();
     setInterval(refreshDepin, 10000);
+    refreshRelayNodeCount();
+    setInterval(refreshRelayNodeCount, 10000);
     refreshNodes();
     setInterval(refreshNodes, 10000);
     refreshRPC();

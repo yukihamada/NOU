@@ -101,9 +101,9 @@ private struct WelcomeView: View {
             }
 
             // Step indicators
-            setupRow(icon: "🦙", title: "Ollama", subtitle: "AIエンジン (自動インストール)", ok: ollamaOK)
-            setupRow(icon: "⚡", title: "Ollama サービス起動", subtitle: "バックグラウンドで常駐", ok: ollamaRunning)
-            setupRow(icon: "🧠", title: "Qwen3.5 モデル", subtitle: "推奨AIモデル (自動ダウンロード)", ok: modelOK)
+            setupRow(icon: "⚡", title: "MLX エンジン", subtitle: "Apple Silicon 専用 AI エンジン", ok: ollamaOK)
+            setupRow(icon: "📦", title: "AI モデル", subtitle: "RAM に合ったモデルを自動選択・DL", ok: ollamaRunning)
+            setupRow(icon: "🧠", title: "AI サーバー起動", subtitle: "ローカルで推論を実行", ok: modelOK)
 
             card {
                 VStack(alignment: .leading, spacing: 4) {
@@ -195,131 +195,82 @@ private struct WelcomeView: View {
         }
     }
 
-    // MARK: Fully automatic setup — no user action needed
+    // MARK: Fully automatic setup — MLX primary, Ollama fallback
     private func startAutoSetup() {
         Task {
-            // 1. Check & install Ollama
-            await updateStatus("Ollama を確認中...", progress: 0.05)
-            let ollamaPath = findOllama()
-            if let path = ollamaPath {
-                await updateStatus("Ollama 検出済み", progress: 0.15)
-                await MainActor.run { ollamaOK = true }
-            } else {
-                await updateStatus("Ollama をインストール中... (brew install ollama)", progress: 0.1)
-                let brew = "/opt/homebrew/bin/brew"
-                if FileManager.default.fileExists(atPath: brew) {
-                    await runProcess(brew, args: ["install", "ollama"])
-                } else {
-                    // No brew: try direct download from ollama.com
-                    await updateStatus("Ollama をダウンロード中 (ollama.com)...", progress: 0.1)
-                    // Fallback: open download page. User must install manually.
-                    await MainActor.run {
-                        NSWorkspace.shared.open(URL(string: "https://ollama.com/download")!)
-                        statusText = "Ollama を手動でインストールしてください"
-                    }
-                    return
-                }
-                if findOllama() != nil {
-                    await MainActor.run { ollamaOK = true }
-                    await updateStatus("Ollama インストール完了", progress: 0.2)
-                } else {
-                    await updateStatus("Ollama のインストールに失敗しました", progress: 0.2)
-                    return
-                }
+            let base = "http://127.0.0.1:4001"
+
+            // Wait for proxy server to come up (started by AppDelegate)
+            await updateStatus("NOU サーバーの起動を待機中...", progress: 0.02)
+            for _ in 0..<15 {
+                if await httpOK("\(base)/health") { break }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
 
-            // 2. Start Ollama service
-            await updateStatus("Ollama サービスを起動中...", progress: 0.25)
-            let ollamaExe = findOllama()!
-            // Start ollama serve if not already running
-            let isRunning = await checkOllamaServing()
-            if !isRunning {
-                // Try brew services first, fallback to direct
-                let brew = "/opt/homebrew/bin/brew"
-                if FileManager.default.fileExists(atPath: brew) {
-                    await runProcess(brew, args: ["services", "start", "ollama"])
-                } else {
-                    // Direct: run `ollama serve` in background
-                    let p = Process()
-                    p.executableURL = URL(fileURLWithPath: ollamaExe)
-                    p.arguments = ["serve"]
-                    p.standardOutput = FileHandle.nullDevice
-                    p.standardError = FileHandle.nullDevice
-                    try? p.run()
-                    // Don't waitUntilExit — it runs as daemon
-                }
-                // Wait for it to come up (max 30s)
-                for _ in 0..<30 {
-                    if await checkOllamaServing() { break }
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
-                }
-            }
-            if await checkOllamaServing() {
-                await MainActor.run { ollamaRunning = true }
-                await updateStatus("Ollama 稼働中", progress: 0.35)
+            // 1. Check current setup status
+            await updateStatus("セットアップ状態を確認中...", progress: 0.05)
+            let status = await fetchJSON("\(base)/api/setup/status")
+            let mlxInstalled = status?["mlxlm_installed"] as? Bool ?? false
+            let serverRunning = status?["server_running"] as? Bool ?? false
+
+            // Determine best MLX model for this Mac's RAM
+            let ram = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
+            let modelID: String
+            let modelName: String
+            if ram >= 64 {
+                modelID = "mlx-community/Qwen3.5-32B-4bit"; modelName = "Qwen3.5 32B"
+            } else if ram >= 24 {
+                modelID = "mlx-community/Qwen3.5-14B-4bit"; modelName = "Qwen3.5 14B"
+            } else if ram >= 16 {
+                modelID = "mlx-community/Qwen3.5-7B-4bit"; modelName = "Qwen3.5 7B"
             } else {
-                await updateStatus("Ollama の起動に失敗しました", progress: 0.35)
-                return
+                modelID = "mlx-community/Qwen3.5-4B-4bit"; modelName = "Qwen3.5 4B"
             }
 
-            // 3. Check if any model exists, if not pull recommended
-            await updateStatus("モデルを確認中...", progress: 0.4)
-            let hasModel = await checkHasModel(ollamaExe)
-            if hasModel {
-                await MainActor.run { modelOK = true }
-                await updateStatus("モデル検出済み", progress: 1.0)
-            } else {
-                // Determine best model based on RAM
-                let ram = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
-                let model: String
-                if ram >= 32 {
-                    model = "qwen3.5:32b"
-                } else if ram >= 16 {
-                    model = "qwen3.5:14b"
-                } else {
-                    model = "qwen3.5:4b"
+            // 2. Install MLX-LM if needed (uses pip3 bundled with macOS)
+            if !mlxInstalled {
+                await updateStatus("MLX-LM をインストール中... (Apple Silicon AI エンジン)", progress: 0.1)
+                await MainActor.run { ollamaOK = false }
+                await callSetupSSE("\(base)/api/setup/install-mlxlm", body: nil) { line in
+                    Task { @MainActor in statusText = "MLX-LM: \(line)" }
                 }
-                await updateStatus("\(model) をダウンロード中... (初回のみ・数分かかります)", progress: 0.45)
+            }
+            await MainActor.run { ollamaOK = true }  // Step 1 done
+            await updateStatus("MLX-LM 準備完了", progress: 0.2)
 
-                // Pull with progress monitoring
-                let pullP = Process()
-                pullP.executableURL = URL(fileURLWithPath: ollamaExe)
-                pullP.arguments = ["pull", model]
-                let pullPipe = Pipe()
-                pullP.standardOutput = pullPipe
-                pullP.standardError = pullPipe
-                try? pullP.run()
-
-                // Monitor progress by reading output
-                let handle = pullPipe.fileHandleForReading
-                handle.readabilityHandler = { fh in
-                    let data = fh.availableData
-                    guard !data.isEmpty, let line = String(data: data, encoding: .utf8) else { return }
-                    // Ollama pull outputs percentage lines
-                    if line.contains("%") {
-                        if let pctStr = line.components(separatedBy: " ").first(where: { $0.contains("%") }),
-                           let pct = Double(pctStr.replacingOccurrences(of: "%", with: "")) {
-                            let mapped = 0.45 + (pct / 100.0) * 0.5  // 45% - 95%
-                            Task { @MainActor in
-                                progress = mapped
-                                statusText = "\(model) をダウンロード中... \(Int(pct))%"
-                            }
-                        }
+            // 3. Download MLX model
+            await updateStatus("\(modelName) をダウンロード中... (初回のみ)", progress: 0.25)
+            await MainActor.run { ollamaRunning = false }
+            await callSetupSSE("\(base)/api/setup/download-model",
+                               body: ["model_id": modelID]) { line in
+                // Parse HF download progress if available
+                Task { @MainActor in
+                    statusText = "\(modelName): \(line)"
+                    // Rough progress mapping
+                    if line.contains("100%") || line.contains("done") {
+                        progress = 0.8
+                    } else if progress < 0.75 {
+                        progress += 0.005
                     }
                 }
-                pullP.waitUntilExit()
-                handle.readabilityHandler = nil
-
-                if await checkHasModel(ollamaExe) {
-                    await MainActor.run { modelOK = true }
-                    await updateStatus("モデルのダウンロード完了！", progress: 1.0)
-                } else {
-                    await updateStatus("モデルのダウンロードに失敗しました", progress: 0.95)
-                    return
-                }
             }
+            await MainActor.run { ollamaRunning = true }  // Step 2 done
+            await updateStatus("\(modelName) ダウンロード完了！", progress: 0.85)
 
-            // All done — auto-transition to done screen
+            // 4. Start MLX server
+            await updateStatus("AI サーバーを起動中...", progress: 0.9)
+            let startBody: [String: Any] = ["model_id": modelID, "port": 5000]
+            let _ = await postJSON("\(base)/api/setup/start-mlx-server", body: startBody)
+
+            // Verify server responds
+            for _ in 0..<10 {
+                if await httpOK("http://127.0.0.1:5000/v1/models") { break }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            await MainActor.run { modelOK = true }  // Step 3 done
+            await updateStatus("準備完了！", progress: 1.0)
+
+            // All done
             try? await Task.sleep(nanoseconds: 500_000_000)
             await MainActor.run {
                 withAnimation { isAutoSetupDone = true }
@@ -327,38 +278,58 @@ private struct WelcomeView: View {
         }
     }
 
-    // MARK: Helpers
-    private func findOllama() -> String? {
-        let paths = ["/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"]
-        return paths.first { FileManager.default.fileExists(atPath: $0) }
-    }
-
-    private func checkOllamaServing() async -> Bool {
-        guard let url = URL(string: "http://127.0.0.1:11434/api/version") else { return false }
+    // MARK: Networking helpers
+    private func httpOK(_ urlString: String) async -> Bool {
+        guard let url = URL(string: urlString) else { return false }
         do {
-            let (_, response) = try await URLSession.shared.data(from: url)
-            return (response as? HTTPURLResponse)?.statusCode == 200
+            let (_, r) = try await URLSession.shared.data(from: url)
+            return (r as? HTTPURLResponse)?.statusCode == 200
         } catch { return false }
     }
 
-    private func checkHasModel(_ ollamaPath: String) async -> Bool {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: ollamaPath)
-        p.arguments = ["list"]
-        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = FileHandle.nullDevice
-        try? p.run(); p.waitUntilExit()
-        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        return out.components(separatedBy: "\n").count > 2
+    private func fetchJSON(_ urlString: String) async -> [String: Any]? {
+        guard let url = URL(string: urlString) else { return nil }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        } catch { return nil }
     }
 
-    @discardableResult
-    private func runProcess(_ path: String, args: [String]) async -> Int32 {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: path)
-        p.arguments = args
-        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
-        try? p.run(); p.waitUntilExit()
-        return p.terminationStatus
+    private func postJSON(_ urlString: String, body: [String: Any]) async -> [String: Any]? {
+        guard let url = URL(string: urlString),
+              let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return nil }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = bodyData
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            return try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        } catch { return nil }
+    }
+
+    /// Call an SSE endpoint and process each line
+    private func callSetupSSE(_ urlString: String, body: [String: Any]?, onLine: @escaping (String) -> Void) async {
+        guard let url = URL(string: urlString) else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let body, let data = try? JSONSerialization.data(withJSONObject: body) {
+            req.httpBody = data
+        }
+        do {
+            let (bytes, _) = try await URLSession.shared.bytes(for: req)
+            for try await line in bytes.lines {
+                if line.hasPrefix("data: ") {
+                    let json = String(line.dropFirst(6))
+                    if let data = json.data(using: .utf8),
+                       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        if let l = obj["line"] as? String { onLine(l) }
+                        if obj["done"] as? Bool == true { break }
+                    }
+                }
+            }
+        } catch { onLine("error: \(error.localizedDescription)") }
     }
 
     private func updateStatus(_ text: String, progress pct: Double) async {

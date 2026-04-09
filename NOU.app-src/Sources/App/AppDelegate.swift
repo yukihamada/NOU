@@ -60,6 +60,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TunnelManager.shared.autoStart()
         }
 
+        // Extract bundled model on first launch (zero-config AI)
+        extractBundledModel()
         // Auto-configure Claude Code + Ollama settings (first launch)
         autoConfigureDevTools()
 
@@ -243,6 +245,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     print("[NOU] Login item registration failed: \(error)")
                 }
             }
+        }
+    }
+
+    // MARK: - Extract bundled GGUF model (zero-config: install = ready to chat)
+
+    private func extractBundledModel() {
+        let fm = FileManager.default
+        let modelDir = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/NOU/models")
+        let destPath = modelDir.appendingPathComponent("Qwen3.5-0.8B-Q4_K_M.gguf")
+
+        // Skip if already extracted
+        guard !fm.fileExists(atPath: destPath.path) else { return }
+
+        // Find bundled model in app Resources
+        guard let bundled = Bundle.main.url(forResource: "default-model", withExtension: "gguf") else {
+            print("[NOU] No bundled model found in Resources")
+            return
+        }
+
+        do {
+            try fm.createDirectory(at: modelDir, withIntermediateDirectories: true)
+            try fm.copyItem(at: bundled, to: destPath)
+            print("[NOU] Extracted bundled model to \(destPath.path) (\(try fm.attributesOfItem(atPath: destPath.path)[.size] ?? 0) bytes)")
+        } catch {
+            print("[NOU] Failed to extract model: \(error)")
         }
     }
 
