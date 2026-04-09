@@ -1,87 +1,127 @@
-# NOU — Private AI on Your Mac
+# 🧠 NOU — Private AI
 
-NOU is a native macOS menu bar app that runs large language models (up to 122B parameters) entirely on your device using Apple Silicon and MLX. No cloud, no subscriptions, no data leaves your machine.
+**あなたのMacとiPhoneで動くローカルAI。クラウド不要、データはデバイスの外に出ない。**
 
-Connect multiple Macs on your local network to form a distributed AI mesh, pooling compute across devices for faster inference on larger models.
+[![macOS](https://img.shields.io/badge/macOS-14%2B-blue?logo=apple)](https://github.com/yukihamada/NOU/releases/latest)
+[![iOS](https://img.shields.io/badge/iOS-17%2B-blue?logo=apple)](https://testflight.apple.com/join/NOUiPhone)
+[![Windows](https://img.shields.io/badge/Windows-10%2F11-blue?logo=windows)](https://github.com/yukihamada/NOU/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Homebrew](https://img.shields.io/badge/Homebrew-yukihamada%2Ftap-orange?logo=homebrew)](https://github.com/yukihamada/homebrew-tap)
 
-## Features
+![NOU demo](https://nou.link/assets/demo.gif)
 
-- **100% On-Device AI** -- All inference runs locally via MLX on Apple Silicon. Your data never leaves your Mac.
-- **Menu Bar App** -- Lives in your macOS menu bar. Always one click away, never in the way.
-- **Distributed Mesh Networking** -- Discover and connect nearby Macs via Bonjour (`_nou._tcp`). Split model layers across machines for larger models and faster generation.
-- **Smart Router** -- Automatically picks the best available model and node for each request based on load and capability.
-- **OpenAI-Compatible API** -- Exposes a local HTTP server so any tool that speaks the OpenAI API can use your local models (IDE plugins, scripts, other apps).
-- **Built-in Plugins** -- Web search, image generation, and code execution plugins extend the AI's capabilities.
-- **Quick AI Panel** -- A floating panel for fast queries without opening a full window.
-- **Dashboard** -- Monitor model status, connected nodes, and request statistics from a built-in web dashboard.
-- **Tunnel Support** -- Securely expose your local NOU instance for remote access.
-- **Pairing System** -- Securely pair new devices to your mesh with token-based authentication.
+---
 
-## Requirements
+## ダウンロード
 
-- macOS 14.0 (Sonoma) or later
-- Apple Silicon (M1/M2/M3/M4)
-- Swift 5.9+
+| プラットフォーム | インストール方法 |
+|---|---|
+| **Mac (Apple Silicon)** | `brew tap yukihamada/tap && brew install --cask nou` または [DMGをダウンロード](https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg) |
+| **iPhone** | [TestFlightで参加](https://testflight.apple.com/join/NOUiPhone) |
+| **Windows 10/11** | [NOU-Setup-Windows.exe](https://github.com/yukihamada/NOU/releases/latest/download/NOU-Setup-Windows.exe) + [Ollama](https://ollama.com/download) |
+| **Linux** | `curl -sSL nou.link/install.sh \| bash` |
 
-## Installation
+---
 
-### Download
+## 特徴
 
-Download the latest `.app` bundle from [Releases](https://github.com/yukihamada/NOU/releases), move it to `/Applications`, and open it.
+- **🔒 完全プライベート** — 会話は一切サーバーに送信されない。Apple Silicon上でMLXが推論
+- **🧠 メニューバーアプリ** — 左クリックでクイックチャット、右クリックで設定メニュー
+- **📱 iPhone対応** — iPhoneからMacのAIにシームレスに接続
+- **🌐 分散推論** — 複数のMacをBonjour経由でメッシュ接続、モデルを分散実行
+- **🔌 OpenAI互換API** — Claude Code / Cursor / Aider などのツールがそのまま使える
+- **⚡ ワンクリックセットアップ** — Ollama / MLX-LM の自動インストール対応
+- **🪟 Windows対応** — Ollama経由でWindows PCからも使用可能
 
-### Build from Source
+---
+
+## クイックスタート (Mac)
+
+```bash
+# Homebrew でインストール（推奨）
+brew tap yukihamada/tap
+brew install --cask nou
+
+# または curl で一発インストール
+curl -sSL nou.link/install.sh | bash
+```
+
+インストール後、アプリを起動するとウェルカム画面が表示されます。
+画面の指示に従って Ollama とモデルをインストールしてください。
+
+---
+
+## 対応モデル
+
+| モデル | 必要RAM | 特徴 |
+|---|---|---|
+| Gemma 4 2B (4bit) | 4GB | 超高速、日常用途 |
+| **Gemma 4 4B (4bit) ★推奨** | 6GB | 高速 + 高品質のバランス |
+| Gemma 4 31B (4bit) | 20GB | 最高品質、M3 Max以上推奨 |
+| Llama 3.1 8B | 10GB | 英語特化 |
+| Qwen3 14B | 18GB | 多言語対応 |
+
+---
+
+## アーキテクチャ
+
+```
+Browser/iPhone ──→ NOU Proxy (localhost:4001)
+                         │
+              ┌──────────┴──────────────┐
+              ↓                         ↓
+        MLX-LM Server              Ollama Server
+     (Apple Silicon GPU)          (CPU / GPU)
+        port 5000-5002              port 11434
+              │
+              └──→ 分散推論 (Bonjour mDNS)
+                   → 他のMac / iPhone
+```
+
+```
+NOU.app-src/          # macOS メニューバーアプリ (Swift + Hummingbird)
+Sources/              # iOS アプリ (SwiftUI + LocalLLMClient)
+site/                 # ランディングページ (nou.link)
+nou-windows/          # Windows インストーラー (NSIS)
+```
+
+---
+
+## 開発環境のセットアップ
+
+### macOS アプリ
 
 ```bash
 cd NOU.app-src
 swift build -c release
-```
-
-Or use the included build script to produce a full `.app` bundle:
-
-```bash
-cd NOU.app-src
-./build-app.sh
+./build-app.sh 2.3.0
 open NOU.app
 ```
 
-## Architecture
+### iOS アプリ
 
-```
-NOU.app-src/
-  Package.swift          # Swift Package Manager manifest
-  Sources/
-    App/                 # AppDelegate, main entry, dashboard view, popover, quick AI panel
-    Client/              # API client for node-to-node communication
-    Dashboard/           # Built-in web dashboard HTML
-    Discovery/           # Bonjour service publisher and browser
-    Menubar/             # Menu bar controller
-    MLX/                 # Model configuration for MLX inference
-    Plugins/             # Web search, image gen, code execution plugins
-    Server/              # HTTP server (Hummingbird), proxy, handlers, distributed inference
-    Stats/               # Request statistics tracking
-site/                    # Landing page at nou.link
+```bash
+# Xcodegenでプロジェクト生成
+xcodegen generate
+open NOU.xcodeproj
 ```
 
-## How It Works
+---
 
-1. **Launch** -- NOU starts as a menu bar icon on macOS.
-2. **Model Loading** -- MLX loads a quantized LLM into unified memory on Apple Silicon.
-3. **Local Server** -- A Hummingbird HTTP server starts on localhost, exposing OpenAI-compatible endpoints.
-4. **Discovery** -- Bonjour advertises the node on the local network. Other NOU instances auto-discover and connect.
-5. **Distributed Inference** -- When a request arrives, the Smart Router decides whether to run it locally or distribute layers across mesh nodes for optimal throughput.
+## プライバシー
 
-## Tech Stack
+NOU はあなたの会話データをサーバーに送信しません。
+詳細は[プライバシーポリシー](https://nou.link/privacy.html)をご覧ください。
 
-- **Swift** + **SwiftUI** (macOS native)
-- **MLX** via [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) for on-device inference
-- **Hummingbird** HTTP server for the local API
-- **Bonjour / mDNS** for zero-config mesh discovery
+---
 
-## License
+## ライセンス
 
-MIT
+MIT License © 2026 EnablerDAO
 
-## Links
+## リンク
 
-- Website: [nou.link](https://nou.link/)
-- Organization: [EnablerDAO](https://enablerdao.com)
+- 🌐 **サイト**: [nou.link](https://nou.link)
+- 🍺 **Homebrew Tap**: [yukihamada/homebrew-tap](https://github.com/yukihamada/homebrew-tap)
+- 📦 **リリース**: [GitHub Releases](https://github.com/yukihamada/NOU/releases)
+- 🏢 **開発元**: [EnablerDAO](https://enablerdao.com)
