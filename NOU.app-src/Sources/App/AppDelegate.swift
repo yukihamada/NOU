@@ -254,10 +254,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let fm = FileManager.default
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
-        let destPath = modelDir.appendingPathComponent("Qwen3.5-0.8B-Q4_K_M.gguf")
+        let bundledName = "Qwen3-1.7B-Q4_K_M.gguf"
+        let destPath = modelDir.appendingPathComponent(bundledName)
 
-        // Skip if already extracted
+        // Skip if already extracted (or a better model exists)
         guard !fm.fileExists(atPath: destPath.path) else { return }
+        // If user already has a larger model, skip extraction
+        let existingModels = (try? fm.contentsOfDirectory(atPath: modelDir.path)) ?? []
+        if existingModels.contains(where: { $0.hasSuffix(".gguf") }) { return }
 
         // Find bundled model in app Resources
         guard let bundled = Bundle.main.url(forResource: "default-model", withExtension: "gguf") else {
@@ -268,9 +272,72 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try fm.createDirectory(at: modelDir, withIntermediateDirectories: true)
             try fm.copyItem(at: bundled, to: destPath)
-            print("[NOU] Extracted bundled model to \(destPath.path) (\(try fm.attributesOfItem(atPath: destPath.path)[.size] ?? 0) bytes)")
+            print("[NOU] Extracted bundled model: \(bundledName)")
         } catch {
             print("[NOU] Failed to extract model: \(error)")
+        }
+
+        // Schedule background upgrade to RAM-optimal model
+        scheduleModelUpgrade()
+    }
+
+    /// Background model upgrade: download a larger model matching this Mac's RAM
+    private func scheduleModelUpgrade() {
+        let ramGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
+        let fm = FileManager.default
+        let modelDir = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/NOU/models")
+
+        // Already have Ollama? Use it for upgrade (much better UX than raw download)
+        let ollamaPath = ["/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"]
+            .first { fm.fileExists(atPath: $0) }
+
+        guard let ollama = ollamaPath else {
+            print("[NOU] No Ollama found — keeping bundled 1.7B model")
+            return
+        }
+
+        // Select optimal model based on RAM
+        let targetModel: String
+        if ramGB >= 32 {
+            targetModel = "qwen3.5:14b"    // 9GB — great for 32GB+
+        } else if ramGB >= 16 {
+            targetModel = "qwen3.5:7b"     // 5GB — good for 16GB
+        } else {
+            // 8GB Mac — bundled 1.7B is already good enough
+            return
+        }
+
+        Task.detached {
+            // Wait for initial setup to complete (user can chat with 1.7B meanwhile)
+            try? await Task.sleep(nanoseconds: 30_000_000_000) // 30s
+
+            // Check if target model already exists in Ollama
+            let checkP = Process()
+            checkP.executableURL = URL(fileURLWithPath: ollama)
+            checkP.arguments = ["list"]
+            let checkPipe = Pipe(); checkP.standardOutput = checkPipe; checkP.standardError = FileHandle.nullDevice
+            try? checkP.run(); checkP.waitUntilExit()
+            let list = String(data: checkPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            if list.contains(targetModel.split(separator: ":").first ?? "") {
+                print("[NOU] Optimal model \(targetModel) already available via Ollama")
+                return
+            }
+
+            print("[NOU] Background upgrade: pulling \(targetModel) via Ollama (RAM: \(ramGB)GB)")
+            let pullP = Process()
+            pullP.executableURL = URL(fileURLWithPath: ollama)
+            pullP.arguments = ["pull", targetModel]
+            pullP.standardOutput = FileHandle.nullDevice
+            pullP.standardError = FileHandle.nullDevice
+            try? pullP.run()
+            pullP.waitUntilExit()
+
+            if pullP.terminationStatus == 0 {
+                print("[NOU] Background upgrade complete: \(targetModel)")
+            } else {
+                print("[NOU] Background upgrade failed for \(targetModel)")
+            }
         }
     }
 
