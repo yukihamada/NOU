@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import UserNotifications
 
 // MARK: - i18n
 
@@ -1322,16 +1323,42 @@ class MenubarController {
     // MARK: - First Launch
 
     private func firstLaunchCheck() {
-        guard !UserDefaults.standard.bool(forKey: "nou.launched.v3") else { return }
-        UserDefaults.standard.set(true, forKey: "nou.launched.v3")
-        // Show prominent welcome alert so user knows the app launched
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            self?.showWelcomeAlert()
+        guard !UserDefaults.standard.bool(forKey: "nou.launched.v4") else { return }
+        UserDefaults.standard.set(true, forKey: "nou.launched.v4")
+        // No welcome window — just silently set up everything.
+        // Show "preparing..." in menubar, notify when ready.
+        statusItem.button?.title = "⏳"
+        monitorModelReady()
+    }
+
+    /// Poll until llama-server is ready, then flip the menubar icon and notify
+    private func monitorModelReady() {
+        Task { @MainActor in
+            for _ in 0..<360 { // up to 30 min
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                if let url = URL(string: "http://127.0.0.1:5021/v1/models"),
+                   let (_, resp) = try? await URLSession.shared.data(from: url),
+                   (resp as? HTTPURLResponse)?.statusCode == 200 {
+                    // Ready!
+                    statusItem.button?.title = "🧠"
+                    sendReadyNotification()
+                    return
+                }
+            }
+            // Timeout — still show brain icon
+            statusItem.button?.title = "🧠"
         }
     }
 
-    private func showWelcomeAlert() {
-        WelcomeWindowController.shared.show()
+    private func sendReadyNotification() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        let content = UNMutableNotificationContent()
+        content.title = "NOU — AI 準備完了"
+        content.body = "メニューバーの 🧠 をクリックしてチャットを始められます。"
+        content.sound = .default
+        let req = UNNotificationRequest(identifier: "nou.ready", content: content, trigger: nil)
+        center.add(req) { _ in }
     }
 
     @objc func openTutorial() {
