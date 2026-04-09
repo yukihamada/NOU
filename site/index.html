@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NOU — Macで動かすプライベートAI</title>
-<meta name="description" content="クラウド不要。サブスク不要。MacだけでClaude CodeやCursorを動かすローカルAI。Qwen3・Gemma 4・DeepSeek-R1・Llama 4対応。">
+<meta name="description" content="月額0円のプライベート AI。ChatGPT のような AI をあなたの Mac で動かす。Claude Code・Cursor・Aider 対応。Qwen3.5・Devstral・GLM-4.7・Phi-4 など対応。">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="canonical" href="https://nou.link/">
 <link rel="alternate" hreflang="en" href="https://nou.link/">
 <link rel="alternate" hreflang="ja" href="https://nou.link/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="NOU — Macで動かすプライベートAI">
-<meta property="og:description" content="クラウド不要。月額0円。MacだけでAIを動かす。Qwen3・Gemma 4・DeepSeek-R1・Llama 4対応。">
+<meta property="og:description" content="月額0円。ChatGPT のような AI を、あなたの Mac の中で動かす。完全プライベート・オフライン動作・Claude Code/Cursor 対応。">
 <meta property="og:url" content="https://nou.link/">
 <meta property="og:image" content="https://nou.link/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -134,27 +134,32 @@ footer a:hover{color:var(--muted)}
     <a href="/docs.html">使い方</a>
     <a href="/token.html">トークン</a>
   </div>
-  <a class="btn-dl" href="https://github.com/enablerdao/NOU/releases/latest">
-    ⬇ ダウンロード
-  </a>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a class="btn-dl" href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg">
+      ⬇ Mac
+    </a>
+    <a class="btn-dl" href="https://testflight.apple.com/join/sMxsJJCW" style="background:linear-gradient(135deg,#5B5BD6,#8B8BD8)">
+      📱 iPhone
+    </a>
+  </div>
 </nav>
 
 <section class="hero">
   <div class="hero-badge">
     <span class="badge-dot"></span>
-    あらゆるコンピューターを AI インフラに · 完全無料
+    <span id="hero-badge-text">ネットワーク確認中...</span>
   </div>
-  <h1>あなたのコンピューターが<br><span>AIサーバーになる</span></h1>
-  <p>クラウドなし。月額なし。<br>Claude Code・Cursor・Aiderをローカルで無制限に動かす。</p>
+  <h1>月額0円の<br><span>プライベート AI</span></h1>
+  <p>ChatGPTのようなAIを、あなたのMacの中で動かします。<br>無料・無制限・あなたのデータは一切外に出ません。</p>
   <div class="hero-actions">
-    <a class="btn-primary" href="https://github.com/enablerdao/NOU/releases/latest">
-      ⬇ 無料でダウンロード
+    <a class="btn-primary" href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg">
+      ⬇ Macで今すぐ始める (無料)
     </a>
-    <a class="btn-secondary" href="/docs.html">
-      📖 使い方を見る
+    <a class="btn-secondary" href="#how-to-start">
+      使い方を見る
     </a>
   </div>
-  <p class="hero-sub">Mac β · Linux α · Windows α · <a href="https://github.com/enablerdao/NOU">オープンソース</a></p>
+  <p class="hero-sub">Mac 対応 · <a href="https://testflight.apple.com/join/sMxsJJCW">iPhone β</a> · <a href="https://github.com/yukihamada/NOU">GitHub でスター ⭐</a> · オープンソース</p>
 
   <div class="mockup">
     <div class="mockup-bar">
@@ -164,14 +169,142 @@ footer a:hover{color:var(--muted)}
       <span style="margin-left:8px;font-size:12px;color:#8b949e">NOU — ローカルAI</span>
     </div>
     <div class="mockup-body">
-      <div><span class="g">●</span> <span class="w">Qwen3-32B</span> <span class="b">動作中</span></div>
+      <div><span class="g">●</span> <span class="w">Qwen3.5 14B</span> <span class="b">動作中</span></div>
       <div><span class="p">→</span> Claude Code に接続済み</div>
       <div>─────────────────</div>
-      <div><span class="g">本日の処理</span>: 1,247 リクエスト</div>
-      <div><span class="g">獲得報酬</span>: 0.034 NCH</div>
-      <div><span class="b">接続ノード</span>: 2台 (分散推論中)</div>
+      <div><span class="g">ネットワークノード</span>: <span id="mockup-nodes" class="w">—</span> 台</div>
+      <div><span class="g">オンラインノード</span>: <span id="mockup-labels" class="b">確認中...</span></div>
       <div>─────────────────</div>
       <div style="color:#3fb950">✓ API料金: ¥0</div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE NETWORK STATS -->
+<section id="live-stats-section" style="padding:0 24px 60px">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent2);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        <span class="badge-dot"></span> LIVE NETWORK
+      </div>
+      <div style="font-size:14px;color:var(--muted)">nou.run リレー経由でリアルタイム取得</div>
+    </div>
+
+    <!-- Stats strip -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px" id="stats-grid">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:center">
+        <div style="font-size:48px;font-weight:800;letter-spacing:-2px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1" id="stat-node-count">—</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;font-weight:600">オンラインノード</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:4px">現在 nou.run に接続中</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:center">
+        <div style="font-size:48px;font-weight:800;letter-spacing:-2px;color:var(--green);line-height:1" id="stat-uptime-avg">—</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;font-weight:600">平均稼働時間</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:4px">接続ノードの平均</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;text-align:center">
+        <div style="font-size:48px;font-weight:800;letter-spacing:-2px;color:#a78bfa;line-height:1" id="stat-relay-status">●</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;font-weight:600">リレー状態</div>
+        <div style="font-size:11px;color:var(--green);margin-top:4px" id="stat-relay-label">接続確認中...</div>
+      </div>
+    </div>
+
+    <!-- Node list cards -->
+    <div id="node-cards-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    <div id="node-cards-empty" style="display:none;text-align:center;padding:32px;color:var(--muted);font-size:14px">
+      ノードが見つかりません — NOU をダウンロードして最初のノードになりましょう
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU CAN DO -->
+<section class="section" id="what-you-can-do" style="padding-top:80px">
+  <div class="container">
+    <div class="section-label">何ができる？</div>
+    <div class="section-title">ChatGPTの<br>代わりに全部できる</div>
+    <div style="max-width:680px;margin:-20px auto 56px;text-align:center;font-size:16px;color:var(--muted);line-height:1.7">
+      インストール直後から、月額タダで以下すべてが使えます。あなたのMacの中で動くので、会話も書いたコードも一切外に送信されません。
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;max-width:1000px;margin:0 auto">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
+        <div style="font-size:32px;margin-bottom:12px">💬</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">質問・相談</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.6">
+          ChatGPT と同じように質問できます。文章作成、要約、翻訳、メール返信、学習サポート、アイデア出し。
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
+        <div style="font-size:32px;margin-bottom:12px">💻</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">プログラミング</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.6">
+          コード生成・デバッグ・レビュー。Claude Code・Cursor・VS Code などのAIエディタがそのまま使えます。
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
+        <div style="font-size:32px;margin-bottom:12px">📄</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">文書を読ませる</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.6">
+          長文・PDF・議事録を貼り付けて「要点は？」「まとめて」。機密情報もクラウドに送られないので安心。
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px">
+        <div style="font-size:32px;margin-bottom:12px">🌐</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px">オフラインで動く</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.6">
+          ネットが無くても使えます。カフェ・機内・家。従量課金なし、API制限なし、365日好きなだけ。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO START (3 STEPS) -->
+<section class="section" id="how-to-start" style="padding-top:40px">
+  <div class="container">
+    <div class="section-label">はじめ方</div>
+    <div class="section-title">3ステップで<br>5分で始められる</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1000px;margin:56px auto 0">
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;position:relative">
+        <div style="position:absolute;top:-14px;left:28px;background:var(--grad);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">1</div>
+        <div style="font-size:18px;font-weight:700;margin:8px 0 10px">NOUをダウンロード</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:14px">
+          Mac用のインストーラをダブルクリックするだけ。自動で必要なものが全部セットアップされます。
+        </div>
+        <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg"
+           style="display:inline-block;font-size:13px;font-weight:700;color:var(--accent);border:1px solid var(--accent);padding:8px 16px;border-radius:8px">
+          ⬇ ダウンロード
+        </a>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;position:relative">
+        <div style="position:absolute;top:-14px;left:28px;background:var(--grad);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">2</div>
+        <div style="font-size:18px;font-weight:700;margin:8px 0 10px">AI モデルを選ぶ</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:10px">
+          メモリに合わせて推奨が出ます。初心者は「最初の1つ」だけでOK。
+        </div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.8;font-family:monospace;background:#010409;padding:10px 12px;border-radius:8px;border:1px solid var(--border)">
+          8GB  → qwen3.5:4b (3GB)<br>
+          16GB → qwen3.5:14b (9GB) ★<br>
+          32GB → devstral-small-2 (15GB)
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;position:relative">
+        <div style="position:absolute;top:-14px;left:28px;background:var(--grad);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">3</div>
+        <div style="font-size:18px;font-weight:700;margin:8px 0 10px">話しかける</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:10px">
+          メニューバーのNOUアイコンをクリック。あとはChatGPTと同じように話しかけるだけ。
+        </div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.6;font-style:italic">
+          「今日の予定を整理して」<br>
+          「このコードのバグを見つけて」<br>
+          「この英語メールを日本語で要約」
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
@@ -208,33 +341,65 @@ footer a:hover{color:var(--muted)}
     <div class="section-title">どのコンピューターでも<br>AIインフラになる</div>
     <p class="section-sub">Mac でベータ公開中。Linux・Windows はアルファ版をリリース。</p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:32px">
+      <!-- iPhone -->
+      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(91,91,214,.5);border-radius:12px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle,rgba(91,91,214,.2),transparent);pointer-events:none"></div>
+        <div style="font-size:24px;margin-bottom:8px">📱</div>
+        <div style="font-weight:700;color:#fff;margin-bottom:8px">iPhone</div>
+        <div style="font-size:12px;color:#a78bfa;background:rgba(91,91,214,.15);border:1px solid rgba(91,91,214,.4);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">β ベータ版</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">iOS 17以降。完全オンデバイス推論。Macとペアリングで大型モデル対応。</p>
+        <a href="https://testflight.apple.com/join/sMxsJJCW"
+           style="display:block;margin-top:14px;padding:10px 0;background:linear-gradient(135deg,rgba(91,91,214,.25),rgba(139,139,216,.15));border:1px solid rgba(91,91,214,.5);border-radius:8px;color:#a78bfa;font-weight:700;font-size:13px;text-align:center;text-decoration:none">
+          📲 TestFlightで入手
+        </a>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">TestFlightアプリが必要です（無料）</p>
+      </div>
+      <!-- Mac -->
       <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(96,165,250,.4);border-radius:12px">
         <div style="font-size:24px;margin-bottom:8px">🍎</div>
         <div style="font-weight:700;color:#fff;margin-bottom:8px">Mac (Apple Silicon)</div>
         <div style="font-size:12px;color:#60a5fa;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">β ベータ版</div>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px">M1〜M5。macOS 14 Sonoma 以降。<br><a href="https://github.com/enablerdao/NOU/releases/latest" style="color:#60a5fa">ダウンロード →</a></p>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">M1〜M5。macOS 14 Sonoma 以降。モデルをローカルで動かすメインプラットフォーム。</p>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-direction:column">
+          <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg"
+             style="display:block;padding:10px 0;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);border-radius:8px;color:#60a5fa;font-weight:700;font-size:13px;text-align:center;text-decoration:none">
+            ⬇ DMG をダウンロード
+          </a>
+          <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.pkg"
+             style="display:block;padding:10px 0;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:8px;color:#93c5fd;font-weight:600;font-size:12px;text-align:center;text-decoration:none">
+            📦 PKG をダウンロード（MDM・企業配布向け）
+          </a>
+          <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:#8b949e;margin-bottom:5px">または Homebrew（推奨）</div>
+            <code style="font-size:11px;color:#58a6ff;font-family:'SF Mono',monospace">brew tap yukihamada/tap<br>brew install --cask nou</code>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">Homebrew なら <code>brew upgrade --cask nou</code> で自動更新</p>
       </div>
       <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(251,191,36,.3);border-radius:12px">
         <div style="font-size:24px;margin-bottom:8px">🐧</div>
         <div style="font-weight:700;color:#fff;margin-bottom:8px">Linux サーバー / GPU</div>
         <div style="font-size:12px;color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">α アルファ版</div>
         <p style="font-size:12px;color:var(--muted);margin-top:10px">Ubuntu / Debian。x86_64 対応。</p>
-        <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-linux-x86_64.AppImage"
+        <a href="https://github.com/yukihamada/NOU/releases/latest/download/nou-server-linux-x86_64"
            style="display:block;margin-top:14px;padding:10px 0;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:8px;color:#fbbf24;font-weight:700;font-size:13px;text-align:center;text-decoration:none">
-          ⬇ AppImage をダウンロード
+          ⬇ バイナリをダウンロード
         </a>
         <p style="font-size:11px;color:var(--muted);margin-top:8px">ダウンロード後、実行権限を付けてダブルクリック</p>
       </div>
-      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(251,191,36,.3);border-radius:12px">
+      <div style="flex:1;min-width:200px;padding:20px 24px;background:#0d1117;border:1px solid rgba(96,165,250,.35);border-radius:12px">
         <div style="font-size:24px;margin-bottom:8px">🪟</div>
-        <div style="font-weight:700;color:#fff;margin-bottom:8px">Windows</div>
-        <div style="font-size:12px;color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">α アルファ版</div>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px">Windows 10 / 11。x86_64 対応。</p>
+        <div style="font-weight:700;color:#fff;margin-bottom:8px">Windows 10 / 11</div>
+        <div style="font-size:12px;color:#60a5fa;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.35);display:inline-block;padding:2px 10px;border-radius:20px;font-weight:600">β ベータ版</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">x86_64。システムトレイで常駐。Ollama連携。</p>
         <a href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Setup-Windows.exe"
-           style="display:block;margin-top:14px;padding:10px 0;background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:8px;color:#fbbf24;font-weight:700;font-size:13px;text-align:center;text-decoration:none">
-          ⬇ インストーラーをダウンロード
+           style="display:block;margin-top:14px;padding:10px 0;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.4);border-radius:8px;color:#60a5fa;font-weight:700;font-size:13px;text-align:center;text-decoration:none">
+          ⬇ インストーラーをダウンロード (.exe)
         </a>
-        <p style="font-size:11px;color:var(--muted);margin-top:8px">ダブルクリックして Next → Install するだけ</p>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">ダブルクリックして Install → 自動起動</p>
+        <div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.03);border-radius:6px;font-size:11px;color:var(--muted)">
+          💡 <a href="https://ollama.com/download/windows" style="color:#60a5fa">Ollamaも別途インストール</a>するとオンデバイス推論が使えます
+        </div>
       </div>
     </div>
   </div>
@@ -250,26 +415,26 @@ footer a:hover{color:var(--muted)}
       <div class="tier">
         <div class="tier-emoji">🌱</div>
         <div class="tier-name">Seed</div>
-        <div class="tier-ram">16GB RAM</div>
-        <div class="tier-model">Qwen3-8B / Gemma 3 4B</div>
+        <div class="tier-ram">8GB RAM</div>
+        <div class="tier-model">Qwen3.5 4B / Phi-4 Mini</div>
       </div>
       <div class="tier">
         <div class="tier-emoji">🌿</div>
         <div class="tier-name">Branch</div>
-        <div class="tier-ram">32GB RAM</div>
-        <div class="tier-model">Qwen3-32B / DeepSeek-R1 14B</div>
+        <div class="tier-ram">16GB RAM</div>
+        <div class="tier-model">Qwen3.5 14B ★ / Phi-4 14B</div>
       </div>
       <div class="tier">
         <div class="tier-emoji">🌳</div>
         <div class="tier-name">Trunk</div>
-        <div class="tier-ram">64GB RAM</div>
-        <div class="tier-model">Qwen3-72B / Gemma 4 31B / Llama 4 Scout</div>
+        <div class="tier-ram">32GB RAM</div>
+        <div class="tier-model">Devstral Small 2 / GLM-4.7</div>
       </div>
       <div class="tier">
         <div class="tier-emoji">🌲</div>
         <div class="tier-name">Root</div>
-        <div class="tier-ram">128GB+ RAM</div>
-        <div class="tier-model">Qwen3-235B MoE / MiniMax-Text-01</div>
+        <div class="tier-ram">64GB+ RAM</div>
+        <div class="tier-model">Qwen3-Coder 80B / Llama 3.3 70B</div>
       </div>
     </div>
   </div>
@@ -380,10 +545,90 @@ footer a:hover{color:var(--muted)}
   <div class="container">
     <h2>今すぐ始める</h2>
     <p>ダウンロードして起動するだけ。設定は3分以内。</p>
-    <a class="btn-primary" href="https://github.com/enablerdao/NOU/releases/latest" style="margin:0 auto;display:inline-flex">
-      ⬇ 無料でダウンロード
-    </a>
-    <p style="margin-top:20px;font-size:13px;color:var(--dim)">Mac β · Linux α · Windows α · MIT License</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+      <a class="btn-primary" href="https://github.com/yukihamada/NOU/releases/latest/download/NOU-Installer.dmg" style="display:inline-flex">
+        ⬇ Mac をダウンロード
+      </a>
+      <a class="btn-primary" href="https://testflight.apple.com/join/sMxsJJCW"
+         style="display:inline-flex;background:linear-gradient(135deg,#5B5BD6,#8B8BD8)">
+        📲 iPhone (TestFlight)
+      </a>
+    </div>
+    <p style="margin-top:20px;font-size:13px;color:var(--dim)">Mac β · iPhone β · Linux α · Windows α · MIT License</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" style="padding-top:40px">
+  <div class="container" style="max-width:760px">
+    <div class="section-label">よくある質問</div>
+    <div class="section-title">気になるポイント</div>
+
+    <div style="margin-top:40px;display:flex;flex-direction:column;gap:12px">
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">❓ 本当に無料ですか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          完全無料です。月額も従量課金もありません。NOU 自体が MIT ライセンスのオープンソース、内部で使う AI モデルも無料公開されているもの（Qwen, Llama, Gemma 等）を使います。必要なのはあなたの Mac だけです。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">🔒 本当に会話は外に送られませんか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          送られません。AI モデルはあなたの Mac の中にダウンロードされ、チャットは全てローカルで処理されます。NOU はオープンソースなので、コードを誰でも検証できます。機内モードでも動きます。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">🆚 ChatGPT や Claude と比べてどう？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          <strong style="color:var(--green)">NOU の強み</strong>: 無料・無制限・プライベート・オフライン対応・API料金ゼロ。<br>
+          <strong style="color:var(--muted)">ChatGPT/Claude の強み</strong>: 最新最強モデル (GPT-4/Claude Sonnet) の生の性能。<br><br>
+          日常のチャット・コーディング・要約ならNOUで十分です。最先端モデルが絶対必要な時だけ ChatGPT を使う、という併用もおすすめ。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">💻 どんな Mac で動きますか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          Apple Silicon (M1 以降) のMacで動きます。メモリ別の目安:<br>
+          ・<strong>8GB</strong>: 軽量モデル (Qwen3.5 4B など) で快適<br>
+          ・<strong>16GB</strong>: 中型モデル (Qwen3.5 14B) で日常使用に十分<br>
+          ・<strong>32GB+</strong>: 大型モデル (Devstral, Qwen3-Coder) で GPT-4 に迫る品質<br>
+          Intel Mac と Linux/Windows 対応は現在ベータです。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">💾 どれくらい容量を使う？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          NOU 本体は約 30MB。AI モデルは選ぶものによって 3〜50GB 程度。迷ったら 16GB Mac なら <code>qwen3.5:14b</code> (9GB) が安定しておすすめです。必要なら後から追加・削除できます。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">🔥 Mac は熱くなりますか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          AI が返答を生成する数秒間だけ CPU/GPU を使います。生成が終われば通常モードに戻るので、長時間熱くなることはありません。Apple Silicon の Neural Engine を使うので電池の消費も比較的少なめです。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">📱 iPhone からも使えますか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          はい。同じ Wi-Fi 内の Mac で NOU を動かしていれば、iPhone から自動で接続できます。外出先からもアクセスできるよう設定することも可能です。TestFlight で配布中です。
+        </div>
+      </details>
+
+      <details style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+        <summary style="font-size:16px;font-weight:700;cursor:pointer;list-style:none">🛠 Claude Code / Cursor で使えますか？</summary>
+        <div style="margin-top:14px;font-size:14px;color:var(--muted);line-height:1.7">
+          はい、そのまま使えます。NOU は OpenAI 互換 API と Anthropic 互換 API の両方を提供しています。Claude Code なら環境変数に NOU のURLを設定するだけで、API 料金ゼロで使えるようになります。設定はインストール時に自動化されます。
+        </div>
+      </details>
+
+    </div>
   </div>
 </section>
 
@@ -395,12 +640,119 @@ footer a:hover{color:var(--muted)}
       <a href="/depin.html">DePIN報酬</a>
       <a href="/docs.html">使い方</a>
       <a href="/token.html">トークン設計</a>
-      <a href="https://github.com/enablerdao/NOU">GitHub</a>
-      <a href="https://enablerdao.com">EnablerDAO</a>
+      <a href="https://github.com/yukihamada/NOU">GitHub</a>
+      <a href="https://enablerhq.com">Enabler</a>
+      <a href="/privacy.html">プライバシーポリシー</a>
     </div>
-    <p>© 2025 EnablerDAO · NOU はオープンソースソフトウェアです (MIT License)</p>
+    <p>© 2026 EnablerDAO · NOU はオープンソースソフトウェアです (MIT License)</p>
   </div>
 </footer>
 
+<script>
+function esc(s) {
+  const t = document.createElement('span');
+  t.textContent = String(s);
+  return t.innerHTML;
+}
+
+async function loadNetwork() {
+  try {
+    const d = await fetch('https://nou.run/api/status').then(r => r.json());
+    const cnt = d.node_count ?? (d.nodes?.length ?? 0);
+    const nodes = d.nodes ?? [];
+
+    // Hero badge
+    const badge = document.getElementById('hero-badge-text');
+    if (badge) badge.textContent = `${cnt} 台オンライン · あらゆるコンピューターを AI インフラに`;
+
+    // Mockup
+    const mn = document.getElementById('mockup-nodes');
+    if (mn) mn.textContent = cnt;
+    const ml = document.getElementById('mockup-labels');
+    if (ml) {
+      if (nodes.length > 0) {
+        ml.textContent = nodes.slice(0, 2).map(n => n.label || n.node_id.slice(0, 8)).join(', ') + (nodes.length > 2 ? ` 他${nodes.length - 2}台` : '');
+      } else {
+        ml.textContent = 'なし';
+      }
+    }
+
+    // Stats strip
+    document.getElementById('stat-node-count').textContent = cnt;
+
+    if (nodes.length > 0) {
+      const avgSecs = nodes.reduce((s, n) => s + (n.uptime_secs || 0), 0) / nodes.length;
+      const hrs = Math.floor(avgSecs / 3600);
+      const mins = Math.floor((avgSecs % 3600) / 60);
+      document.getElementById('stat-uptime-avg').textContent = hrs > 0 ? `${hrs}h` : `${mins}m`;
+    } else {
+      document.getElementById('stat-uptime-avg').textContent = '—';
+    }
+
+    document.getElementById('stat-relay-status').textContent = '●';
+    document.getElementById('stat-relay-status').style.color = '#3fb950';
+    document.getElementById('stat-relay-label').textContent = 'nou.run 稼働中';
+    document.getElementById('stat-relay-label').style.color = '#3fb950';
+
+    // Node cards
+    const list = document.getElementById('node-cards-list');
+    const empty = document.getElementById('node-cards-empty');
+    if (nodes.length === 0) {
+      list.style.display = 'none';
+      empty.style.display = 'block';
+    } else {
+      list.style.display = 'grid';
+      empty.style.display = 'none';
+      list.innerHTML = nodes.map(n => {
+        const secs = n.uptime_secs || 0;
+        const hrs = Math.floor(secs / 3600);
+        const mins = Math.floor((secs % 3600) / 60);
+        const upStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+        const label = n.label || n.node_id.slice(0, 16);
+        const shortUrl = n.url.replace('https://nou.run/n/', 'nou.run/n/').slice(0, 28) + '...';
+        return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;transition:border-color .2s" onmouseover="this.style.borderColor='#2a2a2a'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700">
+              <span style="width:7px;height:7px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb950;flex-shrink:0;animation:pulse 2s infinite;display:inline-block"></span>
+              ${esc(label)}
+            </div>
+            <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.2)">稼働中</span>
+          </div>
+          <div style="font-size:11px;color:var(--dim)">稼働: ${esc(upStr)}</div>
+          <div style="font-size:10px;color:var(--dim);font-family:monospace">${esc(shortUrl)}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    // relay unreachable — show fallback
+    const badge = document.getElementById('hero-badge-text');
+    if (badge) badge.textContent = 'あらゆるコンピューターを AI インフラに · 完全無料';
+    const mn = document.getElementById('mockup-nodes');
+    if (mn) mn.textContent = '—';
+    const ml = document.getElementById('mockup-labels');
+    if (ml) ml.textContent = '—';
+    const rl = document.getElementById('stat-relay-label');
+    if (rl) { rl.textContent = '確認できませんでした'; rl.style.color = 'var(--muted)'; }
+  }
+}
+
+loadNetwork();
+setInterval(loadNetwork, 30000);
+</script>
+
+<script>
+// Privacy-friendly page view beacon — no cookies, no personal data
+(function() {
+  try {
+    var ref = document.referrer ? new URL(document.referrer).hostname : '';
+    fetch('https://nou.run/api/hit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: location.pathname, ref: ref, ua: '' }),
+      keepalive: true
+    });
+  } catch(e) {}
+})();
+</script>
 </body>
 </html>

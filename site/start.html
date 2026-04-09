@@ -118,7 +118,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
     <a href="/depin.html">DePIN</a>
     <a href="/docs.html">ドキュメント</a>
   </div>
-  <a class="btn-dl" href="https://github.com/enablerdao/NOU/releases/latest">⬇ ダウンロード</a>
+  <a class="btn-dl" href="https://github.com/yukihamada/NOU/releases/latest">⬇ ダウンロード</a>
 </nav>
 
 <div class="hero">
@@ -137,7 +137,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
     <button class="ram-btn" data-ram="32" onclick="selectRam(32)">32GB</button>
     <button class="ram-btn" data-ram="64" onclick="selectRam(64)">64GB+</button>
   </div>
-  <div class="ram-note" id="ram-note">16GB → <strong style="color:var(--accent)">Gemma 4 4B</strong> を推奨 (速度と精度のバランスが最適)</div>
+  <div class="ram-note" id="ram-note">16GB → <strong style="color:var(--accent)">Qwen3.5 14B</strong> を推奨 (速度と精度のベストバランス)</div>
 
   <div class="steps">
 
@@ -150,8 +150,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
         <p>GitHubから最新版をダウンロードして、<strong>アプリケーションフォルダ</strong>にドラッグします。<br>
         初回起動時に「開発元を確認できません」と表示されたら、右クリック → 「開く」を選択してください。</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <a href="https://github.com/enablerdao/NOU/releases/latest" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#000;background:var(--grad);border-radius:10px;padding:11px 22px">⬇ NOU.app をダウンロード</a>
-          <a href="https://github.com/enablerdao/NOU" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:10px 18px">GitHub ↗</a>
+          <a href="https://github.com/yukihamada/NOU/releases/latest" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#000;background:var(--grad);border-radius:10px;padding:11px 22px">⬇ NOU.app をダウンロード</a>
+          <a href="https://github.com/yukihamada/NOU" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:10px 18px">GitHub ↗</a>
         </div>
         <div class="tip" style="margin-top:16px">
           <div class="tip-icon">💡</div>
@@ -166,24 +166,23 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
       <div class="step-num">2</div>
       <div class="step-content">
         <div class="step-tag">AIモデルのダウンロード</div>
-        <h2 id="step2-title">Gemma 4 4B をダウンロード</h2>
+        <h2 id="step2-title">Qwen3.5 14B をダウンロード</h2>
         <p id="step2-desc">ターミナルで以下を実行します。初回は3〜5分かかります。</p>
 
         <div class="model-card">
           <div class="model-card-header">
-            <span class="model-name-big" id="rec-model-name">Gemma 4 4B</span>
+            <span class="model-name-big" id="rec-model-name">Qwen3.5 14B</span>
             <div class="model-badges">
-              <span class="badge badge-blue" id="rec-model-size">約3GB</span>
+              <span class="badge badge-blue" id="rec-model-size">約9GB</span>
               <span class="badge badge-green" id="rec-model-note">16GB Macに最適 ✨</span>
-              <span class="badge badge-purple">MLX</span>
+              <span class="badge badge-purple">Ollama</span>
             </div>
           </div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="rec-model-desc">速度と精度のバランスが良く、コーディングや質問応答に最適です。</div>
           <div class="code-block" id="rec-cmd" style="font-size:12px">
-            <span class="gr"># Python環境に mlx-lm がなければまず:</span><br>
-            pip install mlx-lm<br><br>
-            <span class="gr"># モデルをダウンロード (〜5分):</span><br>
-            <span class="wh" id="rec-cmd-text">python -m mlx_lm.generate --model mlx-community/gemma-4-4b-it-4bit --prompt "hello"</span>
+            <span class="gr"># NOU ダッシュボード (localhost:4001) の「モデル」タブから</span><br>
+            <span class="gr"># クリック1つで自動DL されます。ターミナル派なら:</span><br>
+            <span class="wh" id="rec-cmd-text">ollama pull qwen3.5:14b</span>
             <button class="copy-btn" onclick="copyCmd()">コピー</button>
           </div>
         </div>
@@ -233,7 +232,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
             <div class="code-block" style="margin:0;font-size:11px">
               <span class="wh">OPENAI_API_BASE</span>=<span class="hl">http://localhost:4001/v1</span> \<br>
               <span class="wh">OPENAI_API_KEY</span>=<span class="pu">sk-dummy</span> \<br>
-              aider <span class="gr">--model</span> openai/<span id="aider-model">gemma-4-4b</span>
+              aider <span class="gr">--model</span> openai/<span id="aider-model">qwen3.5:14b</span>
               <button class="copy-btn" onclick="copyAider()">コピー</button>
             </div>
           </div>
@@ -265,7 +264,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
           <span class="gr">curl</span> http://localhost:4001/v1/chat/completions \<br>
           &nbsp; -H <span class="pu">"Content-Type: application/json"</span> \<br>
           &nbsp; -d <span class="pu">'{<br>
-          &nbsp;&nbsp;&nbsp;"model": "<span id="test-model">gemma-4-4b</span>",<br>
+          &nbsp;&nbsp;&nbsp;"model": "<span id="test-model">qwen3.5:14b</span>",<br>
           &nbsp;&nbsp;&nbsp;"messages": [{"role":"user","content":"Hello!"}]<br>
           &nbsp;}'</span>
           <button class="copy-btn" onclick="copyTest()">コピー</button>
@@ -277,6 +276,98 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
     </div>
 
   </div><!-- /steps -->
+
+  <!-- Common usage examples -->
+  <section style="margin:48px 0 16px">
+    <h2 style="font-size:24px;font-weight:800;letter-spacing:-1px;margin-bottom:8px">💬 よく使う例</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">メニューバーのNOUアイコンをクリック → チャットウィンドウで話しかけます。ChatGPTと同じ感覚で使えます。</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+
+      <div class="tool-card">
+        <h3>📧 メール返信</h3>
+        <p style="font-style:italic;color:var(--muted)">「このメールに丁寧な日本語で返信して: &lt;メール本文&gt;」</p>
+      </div>
+
+      <div class="tool-card">
+        <h3>📝 文書要約</h3>
+        <p style="font-style:italic;color:var(--muted)">「この議事録の要点を3つでまとめて: &lt;長文&gt;」</p>
+      </div>
+
+      <div class="tool-card">
+        <h3>💻 バグ調査</h3>
+        <p style="font-style:italic;color:var(--muted)">「このエラーの原因と修正方法を教えて: &lt;ログ&gt;」</p>
+      </div>
+
+      <div class="tool-card">
+        <h3>🌍 英語翻訳</h3>
+        <p style="font-style:italic;color:var(--muted)">「この日本語を自然な英語に: &lt;文章&gt;」</p>
+      </div>
+
+      <div class="tool-card">
+        <h3>🧠 ブレスト</h3>
+        <p style="font-style:italic;color:var(--muted)">「SaaS の新規プロダクト案を5つ出して」</p>
+      </div>
+
+      <div class="tool-card">
+        <h3>📊 データ整理</h3>
+        <p style="font-style:italic;color:var(--muted)">「この表を CSV に変換して: &lt;表&gt;」</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Troubleshooting -->
+  <section style="margin:48px 0 16px">
+    <h2 style="font-size:24px;font-weight:800;letter-spacing:-1px;margin-bottom:8px">🛠 困ったときは</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">よくある問題と解決策です。</p>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">NOU がメニューバーに出てこない</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        「アプリケーション」フォルダから <code>NOU.app</code> を直接ダブルクリックしてください。初回起動時に Gatekeeper の確認が出ることがあります（「開く」を選択）。それでも出ない場合は、macOS システム環境設定 → プライバシーとセキュリティ で許可してください。
+      </div>
+    </details>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">チャットすると「モデルが見つかりません」と出る</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        ダッシュボード (<code>http://localhost:4001</code>) の「モデル」タブで、お使いの Mac に合うモデルを1つダウンロードしてください。ダウンロードが終わると自動で使えるようになります (数分かかります)。
+      </div>
+    </details>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">応答がとても遅い</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        モデルのサイズが大きすぎる可能性があります。RAM に対して大きすぎると swap が発生して極端に遅くなります。8GB なら 4B、16GB なら 14B、といった目安で選びなおしてください。また他の重いアプリ (Chrome の多タブ、動画編集など) を閉じるのも効果的です。
+      </div>
+    </details>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">Claude Code から接続できない</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        ターミナルで以下を確認してください:<br>
+        <code style="display:block;margin:8px 0;padding:8px 12px;background:#010409;border-radius:6px">echo $ANTHROPIC_BASE_URL</code>
+        <code>http://localhost:4001</code> が返ってくれば OK です。そうでなければ <code>~/.zshrc</code> に <code>export ANTHROPIC_BASE_URL=http://localhost:4001</code> を追記して <code>source ~/.zshrc</code> してください。また Claude Code の KV キャッシュ最適化のため <code>~/.claude/settings.json</code> に <code>"CLAUDE_CODE_ATTRIBUTION_HEADER": "0"</code> を設定することで速度が10倍改善します。
+      </div>
+    </details>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">モデルのツール呼び出しが失敗する</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        <strong>Gemma4 系はツール呼び出しに既知のバグ</strong>があり Claude Code では使えません。代わりに Qwen3.5 14B、Devstral Small 2、GLM-4.7 Flash などをお使いください。また Ollama のコンテキスト長が短すぎるのも原因になります:<br>
+        <code style="display:block;margin:8px 0;padding:8px 12px;background:#010409;border-radius:6px">export OLLAMA_CONTEXT_LENGTH=65536</code>
+        を <code>~/.zshrc</code> に追加してください。<code>install.sh</code> 経由でインストールした場合は自動設定済みです。
+      </div>
+    </details>
+
+    <details style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:8px">
+      <summary style="font-size:14px;font-weight:700;cursor:pointer;list-style:none">NOU をアンインストールしたい</summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.7">
+        <code>NOU.app</code> をアプリケーションフォルダから削除してください。モデルデータは <code>~/.ollama/models/</code> に保存されています。NOU が relay ノードとして登録した認証情報は <code>~/.nou/</code> に保存されます。完全に消したい場合はこれらも削除してください。
+      </div>
+    </details>
+
+  </section>
 
   <!-- Bonus: DePIN -->
   <div class="bonus">
@@ -297,22 +388,22 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:fl
 <div class="cta">
   <h2>準備はできましたか？</h2>
   <p>NOUを使ってみて、フィードバックやバグ報告はGitHubへ</p>
-  <a href="https://github.com/enablerdao/NOU/releases/latest" class="btn-primary">⬇ NOU をダウンロード</a>
-  <a href="https://github.com/enablerdao/NOU" class="btn-secondary">GitHub ↗</a>
+  <a href="https://github.com/yukihamada/NOU/releases/latest" class="btn-primary">⬇ NOU をダウンロード</a>
+  <a href="https://github.com/yukihamada/NOU" class="btn-secondary">GitHub ↗</a>
 </div>
 
 <script>
 const models = {
-  8:  {name:'Gemma 4 2B',  id:'mlx-community/gemma-4-2b-it-4bit',   size:'約2GB',  note:'8GB Mac向け、超高速',        desc:'Google最新の軽量モデル。8GBのMacBook Airでもサクサク動きます。',  aider:'gemma-4-2b'},
-  16: {name:'Gemma 4 4B',  id:'mlx-community/gemma-4-4b-it-4bit',   size:'約3GB',  note:'16GB Macに最適 ✨',          desc:'速度と精度のバランスが良く、コーディングや質問応答に最適。',        aider:'gemma-4-4b'},
-  32: {name:'Gemma 4 12B', id:'mlx-community/gemma-4-12b-it-4bit',  size:'約8GB',  note:'精度・速度のバランス',        desc:'32GBあれば十分余裕があり、複雑なコードも高精度で処理できます。',  aider:'gemma-4-12b'},
-  64: {name:'Gemma 4 27B', id:'mlx-community/gemma-4-27b-it-4bit',  size:'約18GB', note:'最高精度',                    desc:'64GB以上のMac Studio/Mac Pro向け。GPT-4クラスの高精度。',        aider:'gemma-4-27b'},
+  8:  {name:'Qwen3.5 4B',        id:'ollama pull qwen3.5:4b',        size:'約3GB',  note:'8GB Mac向け、高速',           desc:'軽量ながら日常会話・要約・翻訳に十分。MacBook Air でもサクサク動きます。',  aider:'qwen3.5:4b'},
+  16: {name:'Qwen3.5 14B ★',     id:'ollama pull qwen3.5:14b',       size:'約9GB',  note:'16GB Macに最適 ✨',           desc:'コーディング・推論・文書読解に強い万能モデル。16GB Mac にちょうど良いバランス。',  aider:'qwen3.5:14b'},
+  32: {name:'Devstral Small 2',  id:'ollama pull devstral-small-2',  size:'約15GB', note:'コーディング特化',            desc:'Mistral 製のコーディング専用モデル。Claude Code / Cursor との相性抜群。',  aider:'devstral-small-2'},
+  64: {name:'Qwen3-Coder',       id:'ollama pull qwen3-coder',       size:'約46GB', note:'最強オープンモデル',          desc:'80B MoE。Claude Sonnet 4 に匹敵する品質。Mac Studio / 64GB 以上向け。',  aider:'qwen3-coder'},
 };
 const others = {
-  8:  [{name:'Qwen3-4B',    id:'mlx-community/Qwen3-4B-4bit',    note:'推論・コーディング得意'},{name:'DeepSeek-R1-1.5B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-1.5B-4bit', note:'超軽量・推論特化'}],
-  16: [{name:'Qwen3-8B',    id:'mlx-community/Qwen3-8B-4bit',    note:'推論・コーディング得意'},{name:'DeepSeek-R1-7B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit', note:'推論・数学が得意'}],
-  32: [{name:'Qwen3-14B',   id:'mlx-community/Qwen3-14B-4bit',   note:'高精度コーディング'},{name:'DeepSeek-R1-14B', id:'mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit', note:'高精度推論'}],
-  64: [{name:'Qwen3-32B',   id:'mlx-community/Qwen3-32B-4bit',   note:'超高精度'},{name:'Llama4-Scout-17B', id:'mlx-community/Llama-4-Scout-17B-16E-Instruct-4bit', note:'Meta最新モデル'}],
+  8:  [{name:'Qwen2.5-Coder 7B', id:'ollama pull qwen2.5-coder:7b', note:'枯れていて安定'},{name:'Phi-4 Mini',        id:'ollama pull phi4:mini', note:'Microsoft 軽量モデル'}],
+  16: [{name:'Qwen2.5-Coder 14B',id:'ollama pull qwen2.5-coder:14b',note:'コーディング特化・実績豊富'},{name:'GLM-4.7 Flash', id:'ollama pull glm4-flash', note:'ツール呼び出し安定'},{name:'Phi-4 14B', id:'ollama pull phi4', note:'推論強い'}],
+  32: [{name:'Qwen2.5-Coder 32B',id:'ollama pull qwen2.5-coder:32b',note:'32GB向け枯れた選択'},{name:'GLM-4.7',       id:'ollama pull glm4',       note:'llama.cpp経由で安定'}],
+  64: [{name:'Llama 3.3 70B',    id:'ollama pull llama3.3:70b',     note:'複雑タスクに強い'},{name:'Qwen3.5 35B-A3B', id:'ollama pull qwen3.5:35b-a3b', note:'高速MoE (要設定)'}],
 };
 
 let currentRam = 16;
@@ -327,8 +418,7 @@ function selectRam(gb) {
   document.getElementById('rec-model-size').textContent = m.size;
   document.getElementById('rec-model-note').textContent = m.note;
   document.getElementById('rec-model-desc').textContent = m.desc;
-  const cmdText = `python -m mlx_lm.generate --model ${m.id} --prompt "hello"`;
-  document.getElementById('rec-cmd-text').textContent = cmdText;
+  document.getElementById('rec-cmd-text').textContent = m.id;
   document.getElementById('step2-title').textContent = m.name + ' をダウンロード';
   document.getElementById('aider-model').textContent = m.aider;
   document.getElementById('test-model').textContent = m.aider;
@@ -340,13 +430,13 @@ function selectRam(gb) {
         <span style="font-weight:700;font-size:14px">${o.name}</span>
         <span style="font-size:11px;color:var(--muted);margin-left:8px">${o.note}</span>
       </div>
-      <button onclick="copyToClipboard('python -m mlx_lm.generate --model ${o.id} --prompt hello')" style="font-size:11px;background:#1e2a3a;border:1px solid #30363d;color:#8b949e;border-radius:5px;padding:4px 10px;cursor:pointer">コマンドをコピー</button>
+      <button onclick="copyToClipboard('${o.id}')" style="font-size:11px;background:#1e2a3a;border:1px solid #30363d;color:#8b949e;border-radius:5px;padding:4px 10px;cursor:pointer">コマンドをコピー</button>
     </div>`).join('');
 }
 
 function copyCmd() {
   const m = models[currentRam];
-  copyToClipboard(`pip install mlx-lm\npython -m mlx_lm.generate --model ${m.id} --prompt "hello"`);
+  copyToClipboard(m.id);
 }
 
 function copyAider() {

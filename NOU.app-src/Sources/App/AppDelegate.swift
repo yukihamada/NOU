@@ -8,6 +8,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var browser: NOUBrowser?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Migrate default models to Gemma 4 (one-time)
+        ModelRegistry.migrateToGemma4Defaults()
+        // Fetch remote model catalog from nou.run (async, non-blocking)
+        Task { await ModelCatalogFetcher.shared.loadIfNeeded() }
+        // 多重起動防止 — 同じ Bundle ID の別プロセスがあれば前面に出してこちらは終了
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.enablerdao.nou"
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        if let existing = others.first {
+            existing.activate(options: .activateAllWindows)
+            NSApp.terminate(nil)
+            return
+        }
+
         // Register as login item (auto-start on login)
         registerLoginItem()
         // Start Bonjour advertisement (delay to ensure RunLoop is active)
@@ -26,6 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Create unified menu bar controller with browser
         menubarController = MenubarController(browser: nodeBrowser)
 
+        // Register browser with FallbackRouter for Tier2 (own devices)
+        FallbackRouter.browserRef = nodeBrowser
+
         // Initialize distributed inference: load saved RPC workers
         Task {
             await DistributedInference.shared.loadWorkers()
@@ -43,13 +60,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             TunnelManager.shared.autoStart()
         }
 
-        // Auto-connect DePIN relay if user enabled it
-        Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000) // wait for proxy server
-            if UserDefaults.standard.bool(forKey: "nou.relay.autoConnect") {
+        // Auto-configure Claude Code + Ollama settings (first launch)
+        autoConfigureDevTools()
+
+        // Auto-start llama-server with existing GGUF model
+        Task.detached {
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // プロキシ起動待ち
+            let lcppPort = ModelRegistry.llamacppPortFast
+            let alive = await HealthHandler.isAlive(port: lcppPort)
+            guard !alive else { return }
+            guard let ggufPath = SetupHandler.findExistingGGUF() else { return }
+            let llamaServer = "/opt/homebrew/bin/llama-server"
+            guard FileManager.default.fileExists(atPath: llamaServer) else { return }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: llamaServer)
+            p.arguments = ["-m", ggufPath, "--port", "\(lcppPort)", "-ngl", "99",
+                           "--ctx-size", "4096", "--no-warmup", "-t", "4"]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError  = FileHandle.nullDevice
+            try? p.run()
+            print("[NOU] llama-server 自動起動: \(URL(fileURLWithPath: ggufPath).lastPathComponent) port=\(lcppPort)")
+        }
+
+        // Auto-connect relay (nou.run) — if enabled in settings (default: ON for new installs)
+        // Key: nou.relay.autoConnect — set by Network section toggle
+        // Note: default is true so out-of-box experience works without configuration
+        let relayAutoConnect = UserDefaults.standard.object(forKey: "nou.relay.autoConnect") == nil
+            ? true  // first launch: ON by default
+            : UserDefaults.standard.bool(forKey: "nou.relay.autoConnect")
+        if relayAutoConnect {
+            Task {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // wait for proxy server
                 await RelayClient.shared.connect()
-                print("[NOU] Auto-connected DePIN relay")
+                print("[NOU] Connected to relay (nou.run)")
             }
+        }
+
+        // Register binary attestation with nou.run coordinator (provider side)
+        Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000) // after relay connected
+            let nodeID = UserDefaults.standard.string(forKey: "nou.depin.nodeID") ?? ""
+            let apiKey = UserDefaults.standard.string(forKey: "nou.depin.apiKey") ?? ""
+            await NOUAttestation.shared.registerSelf(nodeID: nodeID, apiKey: apiKey)
         }
 
         // Register sleep/wake notifications for recovery
@@ -71,6 +123,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let mlxPort = ModelRegistry.portMain
             let llamacppPort = Int(ProcessInfo.processInfo.environment["LLAMACPP_PORT_MAIN"] ?? "5020") ?? 5020
             await RuntimeBenchmark.runIfNeeded(mlxPort: mlxPort, llamacppPort: llamacppPort)
+        }
+
+        // Auto-start Open WebUI (pip-installed, no Docker) after proxy is ready
+        if UserDefaults.standard.object(forKey: "nou.openwebui.autoStart") == nil
+            ? true : UserDefaults.standard.bool(forKey: "nou.openwebui.autoStart") {
+            Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // wait for proxy
+                await OpenWebUIManager.shared.start()
+            }
         }
     }
 
@@ -102,33 +163,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        // Reconnect relay if enabled
+        let shouldRelay = UserDefaults.standard.object(forKey: "nou.relay.autoConnect") == nil
+            ? true : UserDefaults.standard.bool(forKey: "nou.relay.autoConnect")
+        if shouldRelay {
+            Task {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                await RelayClient.shared.connect()
+            }
+        }
+        // Restart llama-server if it died during sleep
+        Task.detached {
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            let lcppPort = ModelRegistry.llamacppPortFast
+            guard !(await HealthHandler.isAlive(port: lcppPort)) else { return }
+            guard let ggufPath = SetupHandler.findExistingGGUF() else { return }
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/llama-server")
+            p.arguments = ["-m", ggufPath, "--port", "\(lcppPort)", "-ngl", "99",
+                           "--ctx-size", "4096", "--no-warmup", "-t", "4"]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError  = FileHandle.nullDevice
+            try? p.run()
+            print("[NOU] llama-server 復旧起動 (wake)")
+        }
     }
 
-    // MARK: - Quick AI Hotkey (⌘⇧N)
+    // MARK: - Quick AI Hotkey (⌃⌥N)
 
     private func registerQuickAIHotkey() {
+        let hotKeyMods: NSEvent.ModifierFlags = [.control, .option]
+        let hotKeyCode: UInt16 = 45 // N
+
         // When app is focused
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains([.command, .shift])
-                && event.keyCode == 45 {
+            if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(hotKeyMods)
+                && event.keyCode == hotKeyCode {
                 Task { @MainActor in QuickAIPanel.shared.toggle() }
-                return nil // consume the event
+                return nil
             }
             return event
         }
         // When app is NOT focused (global) — requires Accessibility permission
         if AXIsProcessTrusted() {
             NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-                if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains([.command, .shift])
-                    && event.keyCode == 45 {
+                if event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(hotKeyMods)
+                    && event.keyCode == hotKeyCode {
                     Task { @MainActor in QuickAIPanel.shared.toggle() }
                 }
             }
         } else {
-            // Prompt user for Accessibility permission
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
-            AXIsProcessTrustedWithOptions(options)
-            print("[NOU] Accessibility permission needed for global hotkey ⌘⇧N")
+            // プロンプトは初回のみ表示（バイナリ更新のたびに出ないよう制御）
+            let promptedKey = "nou.ax.prompted"
+            if !UserDefaults.standard.bool(forKey: promptedKey) {
+                UserDefaults.standard.set(true, forKey: promptedKey)
+                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+                AXIsProcessTrustedWithOptions(options)
+            }
+            print("[NOU] Accessibility permission needed for global hotkey ⌃⌥N")
         }
     }
 
@@ -141,7 +233,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func registerLoginItem() {
         if #available(macOS 13.0, *) {
-            // Only register once (first launch)
             let key = "nou.loginItem.registered"
             if !UserDefaults.standard.bool(forKey: key) {
                 do {
@@ -152,6 +243,77 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     print("[NOU] Login item registration failed: \(error)")
                 }
             }
+        }
+    }
+
+    // MARK: - Auto-configure Claude Code + dev tools (first launch, no user action needed)
+
+    private func autoConfigureDevTools() {
+        let key = "nou.devtools.configured"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        Task.detached {
+            let fm = FileManager.default
+            let home = fm.homeDirectoryForCurrentUser.path
+
+            // 1. Set ANTHROPIC_BASE_URL + OLLAMA_CONTEXT_LENGTH in shell RC
+            let shellRCs = ["\(home)/.zshrc", "\(home)/.bashrc"]
+            let shellRC = shellRCs.first { fm.fileExists(atPath: $0) } ?? "\(home)/.zshrc"
+
+            var rcContent = (try? String(contentsOfFile: shellRC, encoding: .utf8)) ?? ""
+
+            var additions: [String] = []
+            if !rcContent.contains("ANTHROPIC_BASE_URL") {
+                additions.append("export ANTHROPIC_BASE_URL=http://localhost:4001  # NOU auto-config")
+            }
+            if !rcContent.contains("ANTHROPIC_API_KEY") {
+                additions.append("export ANTHROPIC_API_KEY=sk-nou-local  # NOU auto-config")
+            }
+            if !rcContent.contains("OLLAMA_CONTEXT_LENGTH") {
+                additions.append("export OLLAMA_CONTEXT_LENGTH=65536  # NOU auto-config")
+            }
+
+            if !additions.isEmpty {
+                let block = "\n\n# NOU — ローカル AI 設定 (自動追加)\n" + additions.joined(separator: "\n") + "\n"
+                if let fh = FileHandle(forWritingAtPath: shellRC) {
+                    fh.seekToEndOfFile()
+                    fh.write(block.data(using: .utf8)!)
+                    fh.closeFile()
+                } else {
+                    // File doesn't exist yet — create it
+                    try? block.write(toFile: shellRC, atomically: true, encoding: .utf8)
+                }
+                print("[NOU] Auto-configured \(shellRC): \(additions.count) env vars")
+            }
+
+            // 2. Set Claude Code KV cache optimization
+            let claudeDir = "\(home)/.claude"
+            let claudeSettings = "\(claudeDir)/settings.json"
+            if !fm.fileExists(atPath: claudeDir) {
+                try? fm.createDirectory(atPath: claudeDir, withIntermediateDirectories: true)
+            }
+            if fm.fileExists(atPath: claudeSettings) {
+                if let data = fm.contents(atPath: claudeSettings),
+                   var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if json["CLAUDE_CODE_ATTRIBUTION_HEADER"] == nil {
+                        json["CLAUDE_CODE_ATTRIBUTION_HEADER"] = "0"
+                        if let updated = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted) {
+                            try? updated.write(to: URL(fileURLWithPath: claudeSettings))
+                            print("[NOU] Updated \(claudeSettings): CLAUDE_CODE_ATTRIBUTION_HEADER=0")
+                        }
+                    }
+                }
+            } else {
+                let initial = #"{"CLAUDE_CODE_ATTRIBUTION_HEADER": "0"}"#
+                try? initial.write(toFile: claudeSettings, atomically: true, encoding: .utf8)
+                print("[NOU] Created \(claudeSettings)")
+            }
+
+            // 3. Mark as done
+            await MainActor.run {
+                UserDefaults.standard.set(true, forKey: key)
+            }
+            print("[NOU] Dev tools auto-configured (Claude Code, Cursor, Aider ready)")
         }
     }
 }
