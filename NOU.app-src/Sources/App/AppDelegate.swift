@@ -254,7 +254,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let fm = FileManager.default
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
-        let bundledName = "Qwen3-1.7B-Q4_K_M.gguf"
+        let bundledName = "Qwen3.5-0.8B-Q4_K_M.gguf"
         let destPath = modelDir.appendingPathComponent(bundledName)
 
         // Skip if already extracted (or a better model exists)
@@ -297,15 +297,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Select optimal model based on RAM
+        // Select optimal model based on RAM (0.8B bundled → upgrade)
         let targetModel: String
         if ramGB >= 32 {
             targetModel = "qwen3.5:14b"    // 9GB — great for 32GB+
         } else if ramGB >= 16 {
             targetModel = "qwen3.5:7b"     // 5GB — good for 16GB
+        } else if ramGB >= 8 {
+            targetModel = "qwen3.5:4b"     // 3GB — good for 8GB
         } else {
-            // 8GB Mac — bundled 1.7B is already good enough
-            return
+            return // bundled 0.8B is fine for <8GB
         }
 
         Task.detached {

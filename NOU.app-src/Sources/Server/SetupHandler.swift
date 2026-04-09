@@ -510,7 +510,7 @@ enum SetupHandler {
     static func findExistingGGUF() -> String? {
         let candidates = [
             // NOU bundled model (extracted on first launch)
-            "\(NSHomeDirectory())/Library/Application Support/NOU/models/Qwen3-1.7B-Q4_K_M.gguf",
+            "\(NSHomeDirectory())/Library/Application Support/NOU/models/Qwen3.5-0.8B-Q4_K_M.gguf",
             "\(NSHomeDirectory())/Library/Application Support/Koe/llm-models/Qwen3-1.7B-Q4_K_M.gguf",
             "\(NSHomeDirectory())/Library/Application Support/Jan/data/models/imported/jan-nano-4b-iQ4_XS.gguf",
             "\(NSHomeDirectory())/Library/Application Support/Jan/data/models/huggingface.co/Menlo/Jan-nano-128k-gguf/jan-nano-128k-iQ4_XS.gguf",
