@@ -298,7 +298,7 @@ private struct WelcomeView: View {
                     // Ollama pull outputs percentage lines
                     if line.contains("%") {
                         if let pctStr = line.components(separatedBy: " ").first(where: { $0.contains("%") }),
-                           let pct = Double(pctStr.replacingOccurrences(of: "%", of: "")) {
+                           let pct = Double(pctStr.replacingOccurrences(of: "%", with: "")) {
                             let mapped = 0.45 + (pct / 100.0) * 0.5  // 45% - 95%
                             Task { @MainActor in
                                 progress = mapped

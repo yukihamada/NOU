@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 // MARK: - i18n
 
@@ -14,6 +15,9 @@ class MenubarController {
     private var timer: Timer?
     private var depinActive = false
     private var tunnelURL: String? = nil
+    // Cached relay state (updated in refreshStatus)
+    private var relayConnected = false
+    private var relayPublicURL: String? = nil
     private var caffeinateProcess: Process? = nil
     private var proxyDownCount = 0
     private var browser: NOUBrowser?
@@ -32,10 +36,46 @@ class MenubarController {
         (5000, "main"), (5001, "fast"), (5002, "vision"), (4001, "proxy")
     ]
 
+    /// NOU アイコンをメニューバーボタンに設定する
+    private func setupMenubarIcon() {
+        guard let button = statusItem.button else { return }
+        // バンドル内の画像を優先、なければフォールバック絵文字
+        if let img = NSImage(named: "NouMenubar") {
+            img.size = NSSize(width: 18, height: 18)
+            img.isTemplate = true   // テンプレート: macOSがダーク/ライトモードに応じて色を自動調整
+            button.image = img
+            button.title = ""
+            button.imagePosition = .imageOnly
+        } else {
+            button.title = "🧠"
+        }
+        // Left-click → Quick Chat; right-click → context menu
+        button.action = #selector(statusItemClicked(_:))
+        button.target = self
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else { return }
+        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+            // Show the context menu on right-click
+            statusItem.menu = cachedMenu
+            statusItem.button?.performClick(nil)
+            // Remove menu after showing so left-click stays handled by action
+            DispatchQueue.main.async { [weak self] in self?.statusItem.menu = nil }
+        } else {
+            // Left-click: quick chat popover
+            QuickChatPopoverController.shared.toggle(relativeTo: sender)
+        }
+    }
+
+    /// Cached context menu (rebuilt periodically)
+    private var cachedMenu: NSMenu?
+
     init(browser: NOUBrowser? = nil) {
         self.browser = browser
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "🧠"
+        setupMenubarIcon()
         // Wire up the dashboard popover with the browser
         if let browser {
             DashboardPopoverController.shared.setBrowser(browser)
@@ -47,6 +87,16 @@ class MenubarController {
         refreshStatus()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             self?.firstLaunchCheck()
+        }
+        // Check for updates in background after 15s
+        Task {
+            try? await Task.sleep(nanoseconds: 15_000_000_000)
+            await UpdateChecker.shared.checkForUpdates()
+            await MainActor.run { [weak self] in
+                if UpdateChecker.shared.isUpdateAvailable {
+                    self?.buildMenu() // Rebuild to show update badge
+                }
+            }
         }
     }
 
@@ -85,11 +135,13 @@ class MenubarController {
             title: L("  ⚡  Quick AI", "  ⚡  Quick AI"),
             action: #selector(openQuickAI), keyEquivalent: "N"
         )
-        quickAIItem.keyEquivalentModifierMask = [.command, .shift]
+        quickAIItem.keyEquivalentModifierMask = [.control, .option]
         quickAIItem.target = self
         menu.addItem(quickAIItem)
 
         addItem(menu, L("  🌐  ダッシュボード", "  🌐  Dashboard"), #selector(openDashboard), "d")
+        addItem(menu, L("  💬  Chat (Open WebUI)", "  💬  Chat (Open WebUI)"), #selector(openChatUI), "o")
+        addItem(menu, L("  📖  使い方・チュートリアル", "  📖  Getting Started"), #selector(openTutorial), "")
 
         menu.addItem(.separator())
 
@@ -143,19 +195,34 @@ class MenubarController {
         menu.setSubmenu(connectMenu, for: connectParent)
         buildConnectSubmenu(connectMenu)
 
-        let settingsMenu = NSMenu()
-        let settingsParent = NSMenuItem(
-            title: L("  ⚙️  設定・ツール", "  ⚙️  Settings & Tools"),
-            action: nil, keyEquivalent: ""
-        )
-        menu.addItem(settingsParent)
-        menu.setSubmenu(settingsMenu, for: settingsParent)
-        buildSettingsSubmenu(settingsMenu)
+        // ── ⑨ ツール ────────────────────────────────────
+        menu.addItem(.separator())
+        addItem(menu, L("  💬  Claude Code...", "  💬  Claude Code..."), #selector(launchCld), "")
+        addItem(menu, L("  🤖  Aider...", "  🤖  Aider..."), #selector(launchAider), "")
 
+        // ── ⑩ 設定 / アップデート / 終了 ─────────────────
+        menu.addItem(.separator())
+        if UpdateChecker.shared.isUpdateAvailable, let v = UpdateChecker.shared.latestVersion {
+            let updItem = NSMenuItem(
+                title: L("  🆕  v\(v) にアップデート", "  🆕  Update to v\(v)"),
+                action: #selector(openNativeSettings), keyEquivalent: ""
+            )
+            updItem.target = self
+            updItem.attributedTitle = NSAttributedString(
+                string: L("  🆕  v\(v) にアップデート", "  🆕  Update to v\(v)"),
+                attributes: [.foregroundColor: NSColor.systemGreen,
+                             .font: NSFont.systemFont(ofSize: 13, weight: .semibold)]
+            )
+            menu.addItem(updItem)
+        }
+        addItem(menu, L("  ⚙️  設定...", "  ⚙️  Preferences..."), #selector(openNativeSettings), ",")
+        addItem(menu, L("  ⏸  休止 (サーバー停止)", "  ⏸  Pause (stop server)"), #selector(pauseNOU), "")
+        addItem(menu, L("  🗑  NOU をアンインストール", "  🗑  Uninstall NOU"), #selector(uninstallNOU), "")
         menu.addItem(.separator())
         addItem(menu, L("NOUを終了", "Quit NOU"), #selector(quit), "q")
 
-        statusItem.menu = menu
+        cachedMenu = menu
+        // Don't attach menu directly — left-click is handled via statusItemClicked
     }
 
     private func buildNetworkSection(_ menu: NSMenu) {
@@ -277,14 +344,6 @@ class MenubarController {
         }
 
         menu.addItem(.separator())
-
-        // Get models from network
-        let getModelsItem = NSMenuItem(
-            title: L("  📦 ネットワークからモデル取得...", "  📦 Get Models from Network..."),
-            action: #selector(fetchRemoteModels), keyEquivalent: ""
-        )
-        getModelsItem.target = self
-        menu.addItem(getModelsItem)
 
         // Add server manually
         let addItem = NSMenuItem(title: L("  ＋ サーバーを追加...", "  ＋ Add Server..."), action: #selector(addRemoteHost), keyEquivalent: "")
@@ -799,15 +858,15 @@ class MenubarController {
     private func buildConnectSubmenu(_ menu: NSMenu) {
         menu.autoenablesItems = false
 
-        // Auto-Tunnel toggle (QUIC)
+        // Relay toggle (nou.run — always on)
         let autoTunnelItem = NSMenuItem(
-            title: L("  🌐  Auto-Tunnel (QUIC)", "  🌐  Auto-Tunnel (QUIC)"),
+            title: L("  🌐  NOU Relay (nou.run)", "  🌐  NOU Relay (nou.run)"),
             action: #selector(toggleAutoTunnel),
             keyEquivalent: ""
         )
         autoTunnelItem.target = self
         autoTunnelItem.tag = 6000
-        autoTunnelItem.state = TunnelManager.shared.isAutoStartEnabled ? .on : .off
+        autoTunnelItem.state = .on   // relay is always auto-connected
         menu.addItem(autoTunnelItem)
 
         // Tunnel URL display (hidden when no tunnel)
@@ -893,13 +952,7 @@ class MenubarController {
 
     // MARK: - Menubar Icon Animation
 
-    private var roleIcon: String {
-        switch nodeRole {
-        case .server:  return "🧠"
-        case .relay:   return "◆"
-        case .unknown: return "🧠"
-        }
-    }
+    private var roleIcon: String { "" }  // 画像アイコン使用のため不使用
 
     private func updateMenubarIcon(tps: Double) {
         currentTPS = tps
@@ -907,6 +960,48 @@ class MenubarController {
             startPulse()
         } else {
             stopPulse()
+            // Show "!" badge if setup incomplete (no model running after 30s)
+            checkSetupBadge()
+        }
+    }
+
+    private var setupBadgeTimer: Timer? = nil
+    private func checkSetupBadge() {
+        // Only show badge if proxy is not responding (setup not complete)
+        guard pulseTimer == nil else { return }
+        let proxyAlive = Self.isPortAlive(4001)
+        guard let button = statusItem.button else { return }
+        if !proxyAlive {
+            // Orange exclamation badge on the icon
+            let badgeAttr = NSAttributedString(string: " !", attributes: [
+                .font: NSFont.boldSystemFont(ofSize: 9),
+                .foregroundColor: NSColor.systemOrange,
+                .baselineOffset: 4
+            ])
+            button.attributedTitle = badgeAttr
+            if let img = NSImage(named: "NouMenubar") {
+                img.size = NSSize(width: 18, height: 18)
+                img.isTemplate = true
+                button.image = img
+                button.imagePosition = .imageLeft
+            }
+        } else {
+            // Clear badge if proxy is running
+            if button.attributedTitle.string == " !" {
+                button.attributedTitle = NSAttributedString()
+                setupMenubarIconImage()
+            }
+        }
+    }
+
+    private func setupMenubarIconImage() {
+        guard let button = statusItem.button else { return }
+        if let img = NSImage(named: "NouMenubar") {
+            img.size = NSSize(width: 18, height: 18)
+            img.isTemplate = true
+            button.image = img
+            button.imagePosition = .imageOnly
+            button.title = ""
         }
     }
 
@@ -923,25 +1018,27 @@ class MenubarController {
         pulseTimer = nil
         pulseState = false
         statusItem.button?.attributedTitle = NSAttributedString()
-        statusItem.button?.title = roleIcon
+        setupMenubarIcon()
     }
 
     private func applyPulseFrame() {
         pulseState.toggle()
-        let title = NSMutableAttributedString()
-        // Main icon
-        title.append(NSAttributedString(string: roleIcon, attributes: [
-            .font: NSFont.systemFont(ofSize: 13)
-        ]))
-        // Animated tok/s in green (compact, monospaced)
         let tpsStr = currentTPS >= 10 ? String(Int(currentTPS)) : String(format: "%.1f", currentTPS)
         let opacity: CGFloat = pulseState ? 1.0 : 0.35
-        title.append(NSAttributedString(string: " \(tpsStr)", attributes: [
+        // TPS テキストだけ attributedTitle に入れ、image は維持
+        let tpsAttr = NSAttributedString(string: " \(tpsStr)", attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .semibold),
             .foregroundColor: NSColor.systemGreen.withAlphaComponent(opacity),
             .baselineOffset: 2
-        ]))
-        statusItem.button?.attributedTitle = title
+        ])
+        statusItem.button?.attributedTitle = tpsAttr
+        // 画像を再セット（attributedTitle が上書きするので）
+        if let img = NSImage(named: "NouMenubar") {
+            img.size = NSSize(width: 18, height: 18)
+            img.isTemplate = true
+            statusItem.button?.image = img
+            statusItem.button?.imagePosition = .imageLeft
+        }
     }
 
     /// Build a compact status string for the status row (tag 1000).
@@ -980,7 +1077,11 @@ class MenubarController {
             for entry in await self.mlxPorts {
                 portResults.append((entry.port, entry.key, Self.isPortAlive(entry.port)))
             }
-            let depinRunning = await self.depinActive || Self.isProcessRunning("cloudflared")
+            // Fetch relay state from actor
+            let relaySnap = await RelayClient.shared.snapshot
+            let relayConn = relaySnap["connected"] as? Bool ?? false
+            let relayURL  = relaySnap["public_url"] as? String ?? ""
+            let depinRunning = await self.depinActive || relayConn
             let idleSecs = Self.getIdleSeconds()
             let isIdle = idleSecs >= 300
 
@@ -1070,14 +1171,15 @@ class MenubarController {
                     )
                 }
 
-                // Tunnel URL display (tag 6001) — sync from TunnelManager
-                let tm = TunnelManager.shared
-                self.tunnelURL = tm.tunnelURL
+                // Relay URL display (tag 6001) — sync from RelayClient
+                self.relayConnected = relayConn
+                self.relayPublicURL = relayURL.isEmpty ? nil : relayURL
+                self.tunnelURL = self.relayPublicURL
                 if let urlItem = menu.items.first(where: { $0.tag == 6001 }) {
-                    if let tURL = tm.tunnelURL {
+                    if let rURL = self.relayPublicURL {
                         urlItem.isHidden = false
                         urlItem.attributedTitle = NSAttributedString(
-                            string: "    \(tURL)",
+                            string: "    \(rURL)",
                             attributes: [.foregroundColor: NSColor.systemBlue,
                                          .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)]
                         )
@@ -1085,9 +1187,9 @@ class MenubarController {
                         urlItem.isHidden = true
                     }
                 }
-                // Auto-Tunnel checkmark (tag 6000)
+                // Auto-Relay checkmark (tag 6000) — relay is always on, show as checked
                 if let autoItem = menu.items.first(where: { $0.tag == 6000 }) {
-                    autoItem.state = tm.isAutoStartEnabled ? .on : .off
+                    autoItem.state = .on
                 }
             }
         }
@@ -1163,6 +1265,24 @@ class MenubarController {
         }
     }
 
+    func askRestart(_ title: String, _ detail: String) {
+        DispatchQueue.main.async {
+            let a = NSAlert()
+            a.messageText     = title
+            a.informativeText = detail
+            a.addButton(withTitle: L("今すぐ再起動", "Restart Now"))
+            a.addButton(withTitle: L("後で", "Later"))
+            if a.runModal() == .alertFirstButtonReturn {
+                let url = Bundle.main.bundleURL
+                let task = Process()
+                task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                task.arguments = [url.path]
+                try? task.run()
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
     func promptInput(_ title: String, _ placeholder: String, completion: @escaping (String) -> Void) {
         DispatchQueue.main.async {
             let alert = NSAlert(); alert.messageText = title
@@ -1202,72 +1322,117 @@ class MenubarController {
     // MARK: - First Launch
 
     private func firstLaunchCheck() {
-        guard !UserDefaults.standard.bool(forKey: "nou.launched.v2") else { return }
-        UserDefaults.standard.set(true, forKey: "nou.launched.v2")
-
-        let ramGB = Int(ProcessInfo.processInfo.physicalMemory / (1024*1024*1024))
-        let tier = NodeTier.from(memoryGB: ramGB)
-
-        let alert = NSAlert()
-        alert.messageText = L("NOU へようこそ！", "Welcome to NOU!")
-        alert.informativeText = L("""
-            あなたのMac: \(tier.icon) \(tier.rawValue) (\(ramGB) GB)
-
-            NOU は Apple Silicon の GPU でAIモデルをローカル実行するアプリです。
-            インターネット不要・データは外部に出ません。
-
-            まず「ダッシュボード」を開いてモデルをダウンロードしてください。
-            ダウンロード後、⌘⇧N で Quick AI パネルが使えます。
-
-            Claude Code / Aider などのツールは localhost:4001 に向けるだけで動きます。
-            """, """
-            Your Mac: \(tier.icon) \(tier.rawValue) (\(ramGB) GB)
-
-            NOU runs AI models locally on Apple Silicon GPU.
-            No internet required. Your data never leaves your device.
-
-            Open Dashboard to download a model first.
-            After downloading, use ⌘⇧N for Quick AI.
-
-            Point Claude Code / Aider at localhost:4001 and go.
-            """)
-        alert.addButton(withTitle: L("ダッシュボードを開く", "Open Dashboard"))
-        alert.addButton(withTitle: L("後で", "Later"))
-        if alert.runModal() == .alertFirstButtonReturn {
-            openDashboard()
+        guard !UserDefaults.standard.bool(forKey: "nou.launched.v3") else { return }
+        UserDefaults.standard.set(true, forKey: "nou.launched.v3")
+        // Show prominent welcome alert so user knows the app launched
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.showWelcomeAlert()
         }
+    }
+
+    private func showWelcomeAlert() {
+        WelcomeWindowController.shared.show()
+    }
+
+    @objc func openTutorial() {
+        // Open the full interactive tutorial in the default browser
+        if let url = URL(string: "http://localhost:4001/tutorial") {
+            NSWorkspace.shared.open(url)
+        }
+        // Also open the settings guide panel as a fallback
+        NOUSettingsWindowController.shared.showSettings()
+        NOUSettingsWindowController.shared.showSection("guide")
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Actions: Control
 
     @objc func startAll() {
-        statusItem.button?.title = "🧠"
-        runShell("~/ai.sh start") { [weak self] out in
-            Task { @MainActor in
-                self?.refreshStatus()
-                if !out.isEmpty { self?.showAlert(L("起動","Started"), out) }
+        setupMenubarIcon()
+        // ai.sh があれば使う（開発者環境）、なければ直接起動
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            runShell("'\(aiSh)' start") { [weak self] out in
+                Task { @MainActor in
+                    self?.refreshStatus()
+                    if !out.isEmpty { self?.showAlert(L("起動","Started"), out) }
+                }
+            }
+        } else {
+            // プロキシサーバー経由でMLXサーバーを起動
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard let url = URL(string: "http://localhost:4001/api/setup/start-mlx-server") else { return }
+                var req = URLRequest(url: url); req.httpMethod = "POST"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.httpBody = try? JSONSerialization.data(withJSONObject: [:])
+                _ = try? await URLSession.shared.data(for: req)
+                self.refreshStatus()
+                self.showAlert(L("起動","Start"), L("MLXサーバーを起動しました","MLX server started"))
             }
         }
     }
 
     @objc func stopAll() {
-        runShell("~/ai.sh stop") { [weak self] _ in
-            Task { @MainActor in self?.statusItem.button?.title = "🧠"; self?.refreshStatus() }
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            runShell("'\(aiSh)' stop") { [weak self] _ in
+                Task { @MainActor in self?.setupMenubarIcon(); self?.refreshStatus() }
+            }
+        } else {
+            // mlx_lm.server プロセスを直接停止
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            p.arguments = ["-f", "mlx_lm.server"]
+            p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+            try? p.run()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                Task { @MainActor in self?.setupMenubarIcon(); self?.refreshStatus() }
+            }
         }
     }
 
     @objc func restartAll() {
-        statusItem.button?.title = "🧠"
-        runShell("~/ai.sh restart") { [weak self] out in
-            Task { @MainActor in self?.refreshStatus() }
+        setupMenubarIcon()
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            runShell("'\(aiSh)' restart") { [weak self] _ in
+                Task { @MainActor in self?.refreshStatus() }
+            }
+        } else {
+            // stop → 1s 待機 → start
+            let stop = Process()
+            stop.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            stop.arguments = ["-f", "mlx_lm.server"]
+            stop.standardOutput = FileHandle.nullDevice; stop.standardError = FileHandle.nullDevice
+            try? stop.run()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                self?.startAll()
+            }
         }
     }
 
     @objc func healthCheck() {
-        runShell("~/ai.sh health 2>/dev/null || echo '...'") { [weak self] out in
-            Task { @MainActor in
-                self?.refreshStatus()
-                self?.showAlert(L("ヘルスチェック","Health Check"), out.isEmpty ? L("正常","OK") : out)
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            runShell("'\(aiSh)' health 2>/dev/null || echo '...'") { [weak self] out in
+                Task { @MainActor in
+                    self?.refreshStatus()
+                    self?.showAlert(L("ヘルスチェック","Health Check"), out.isEmpty ? L("正常","OK") : out)
+                }
+            }
+        } else {
+            // ポートの稼働状況を直接確認
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let ports = [(4001, "Proxy"), (5000, "MLX Main"), (5001, "MLX Fast"), (5002, "MLX Vision")]
+                var lines: [String] = []
+                for (port, name) in ports {
+                    let alive = Self.isPortAlive(port)
+                    lines.append("\(alive ? "✅" : "⭕") \(name) :\(port)")
+                }
+                self.refreshStatus()
+                self.showAlert(L("ヘルスチェック","Health Check"), lines.joined(separator: "\n"))
             }
         }
     }
@@ -1279,10 +1444,10 @@ class MenubarController {
               let preset = ModelRegistry.presets.first(where: { $0.id == presetID }) else { return }
         ModelRegistry.setActiveModel(slot: preset.slot, presetID: presetID)
         buildMenu()  // メニューを再構築して ✓ を更新
-        showAlert(
-            L("モデルを変更しました", "Model changed"),
-            L("再起動で有効になります:\n\(preset.displayName)\n\(preset.mlxModelID)",
-              "Restart to apply:\n\(preset.displayName)\n\(preset.mlxModelID)")
+        askRestart(
+            L("モデルを変更しました", "Model Changed"),
+            L("今すぐ再起動して \(preset.displayName) を有効にしますか？",
+              "Restart now to activate \(preset.displayName)?")
         )
     }
 
@@ -1291,9 +1456,10 @@ class MenubarController {
               let runtime = BackendConfig.Runtime(rawValue: rtString) else { return }
         ModelRegistry.setActiveRuntime(slot: "main", runtime: runtime)
         buildMenu()
-        showAlert(
-            L("ランタイムを変更しました", "Runtime changed"),
-            L("再起動で有効になります: \(rtString)", "Restart to apply: \(rtString)")
+        askRestart(
+            L("ランタイムを変更しました", "Runtime Changed"),
+            L("今すぐ再起動して \(rtString) を有効にしますか？",
+              "Restart now to activate \(rtString)?")
         )
     }
 
@@ -1328,54 +1494,83 @@ class MenubarController {
         QuickAIPanel.shared.toggle()
     }
 
+    @objc func openChatUI() {
+        Task {
+            let mgr = OpenWebUIManager.shared
+            let installed = await mgr.isInstalled
+            if !installed {
+                OpenWebUIManager.showInstallInstructions()
+                return
+            }
+            let running = await mgr.isRunning
+            let starting = await mgr.isStarting
+            if !running && !starting {
+                // Start if not yet running
+                Task { await OpenWebUIManager.shared.start() }
+                // Brief delay then open browser
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+            await mgr.openInBrowser()
+        }
+    }
+
     // MARK: - Actions: Generate
 
     @objc func genImage() {
-        promptInput(L("画像プロンプト","Image Prompt"), "a cyberpunk Tokyo street at night") { [weak self] prompt in
-            self?.showAlert(L("生成中...","Generating..."), L("約17秒","~17 seconds"))
-            self?.runShell("~/ai.sh img \"\(prompt)\"") { _ in
-                self?.showAlert(L("完成！","Done!"), "~/generated/")
-                DispatchQueue.main.async {
-                    NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("generated"))
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            promptInput(L("画像プロンプト","Image Prompt"), "a cyberpunk Tokyo street at night") { [weak self] prompt in
+                self?.showAlert(L("生成中...","Generating..."), L("約17秒","~17 seconds"))
+                let escaped = prompt.replacingOccurrences(of: "\"", with: "\\\"")
+                self?.runShell("'\(aiSh)' img \"\(escaped)\"") { _ in
+                    self?.showAlert(L("完成！","Done!"), "~/generated/")
+                    DispatchQueue.main.async {
+                        NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("generated"))
+                    }
                 }
             }
+        } else {
+            NSWorkspace.shared.open(URL(string: "http://localhost:4001")!)
         }
     }
 
     @objc func genVideo() {
-        promptInput(L("動画プロンプト","Video Prompt"), "samurai on a cliff, sunset") { [weak self] prompt in
-            self?.showAlert(L("生成中...","Generating..."), L("約10分","~10 min"))
-            self?.runShell("~/ai.sh vid \"\(prompt)\"") { _ in
-                self?.showAlert(L("完成！","Done!"), "~/generated/")
-                DispatchQueue.main.async {
-                    NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("generated"))
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            promptInput(L("動画プロンプト","Video Prompt"), "samurai on a cliff, sunset") { [weak self] prompt in
+                self?.showAlert(L("生成中...","Generating..."), L("約10分","~10 min"))
+                let escaped = prompt.replacingOccurrences(of: "\"", with: "\\\"")
+                self?.runShell("'\(aiSh)' vid \"\(escaped)\"") { _ in
+                    self?.showAlert(L("完成！","Done!"), "~/generated/")
+                    DispatchQueue.main.async {
+                        NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("generated"))
+                    }
                 }
             }
+        } else {
+            NSWorkspace.shared.open(URL(string: "http://localhost:4001")!)
         }
     }
 
     // MARK: - Actions: DePIN
 
     @objc func startDepin() {
-        depinActive = true; preventSleep(); statusItem.button?.title = "🧠"
-        DispatchQueue.global().async { [weak self] in
-            guard let self else { return }
-            let p = Process(); p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            p.arguments = ["-c", "export PATH=/opt/homebrew/bin:$PATH && pkill -f cloudflared 2>/dev/null; sleep 1 && nohup cloudflared tunnel --url http://127.0.0.1:4001 > ~/cloudflared.log 2>&1 &"]
-            try? p.run(); p.waitUntilExit()
-            var url: String? = nil
-            for _ in 0..<20 {
-                sleep(2)
-                let home = FileManager.default.homeDirectoryForCurrentUser
-                if let log = try? String(contentsOf: home.appendingPathComponent("cloudflared.log"), encoding: .utf8),
-                   let r = log.range(of: "https://[a-z0-9-]+\\.trycloudflare\\.com", options: .regularExpression) {
-                    url = String(log[r]); break
+        depinActive = true; preventSleep(); setupMenubarIcon()
+        Task {
+            await RelayClient.shared.connect()
+            // Wait up to 10s for relay URL
+            var tunnelURL: String? = nil
+            for _ in 0..<10 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                let snap = await RelayClient.shared.snapshot
+                if let u = snap["public_url"] as? String, !u.isEmpty {
+                    tunnelURL = u; break
                 }
             }
-            guard let tunnelURL = url else {
-                Task { @MainActor in
+            guard let tunnelURL else {
+                await MainActor.run {
                     self.depinActive = false; self.allowSleep()
-                    self.showAlert(L("エラー","Error"), "brew install cloudflared")
+                    self.showAlert(L("エラー","Error"), "nou.run への接続に失敗しました")
                 }
                 return
             }
@@ -1415,35 +1610,31 @@ class MenubarController {
 
     @objc func stopDepin() {
         depinActive = false; allowSleep(); tunnelURL = nil
-        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        p.arguments = ["-f", "cloudflared"]; try? p.run(); p.waitUntilExit()
-        Task { @MainActor in refreshStatus() }
+        Task {
+            await RelayClient.shared.disconnect()
+            await MainActor.run { self.refreshStatus() }
+        }
     }
 
     @objc func depinStatus() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let log = (try? String(contentsOf: home.appendingPathComponent("cloudflared.log"), encoding: .utf8)) ?? ""
-        let turl = tunnelURL ?? log.range(of: "https://[a-z0-9-]+\\.trycloudflare\\.com", options: .regularExpression).map { String(log[$0]) }
-        let nodeID = UserDefaults.standard.string(forKey: "nou.depin.nodeID") ?? "—"
-        let running = Self.isProcessRunning("cloudflared")
+        let nodeID = UserDefaults.standard.string(forKey: "nou.relay.nodeID") ?? "—"
+        let running = relayConnected
         let idle = Self.getIdleSeconds()
-        showAlert("DePIN", """
-        \(running ? "● Running" : "○ Stopped")
-        \(running ? (idle >= 300 ? "💰 Idle earning" : "🟢 Local priority") : "")
+        let turl = relayPublicURL ?? "none"
+        showAlert("DePIN (NOU Relay)", """
+        \(running ? "● Connected (nou.run)" : "○ Disconnected")
+        \(running ? (idle >= 300 ? "💰 Idle earning" : "🟢 Active") : "")
         Node ID: \(nodeID)
-        URL: \(turl ?? "none")
+        URL: \(turl)
         Idle: \(Int(idle))s
         """)
     }
 
     @objc func copyDepinInfo() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let log = (try? String(contentsOf: home.appendingPathComponent("cloudflared.log"), encoding: .utf8)) ?? ""
-        guard let r = log.range(of: "https://[a-z0-9-]+\\.trycloudflare\\.com", options: .regularExpression) else {
-            showAlert(L("Tunnelなし","No Tunnel"), L("先にDePINを起動","Start DePIN first")); return
+        guard let turl = relayPublicURL, !turl.isEmpty else {
+            showAlert(L("Relayなし","No Relay"), L("接続中にリトライします...","Connecting... try again shortly")); return
         }
-        let turl = String(log[r])
-        let nodeID = UserDefaults.standard.string(forKey: "nou.depin.nodeID") ?? "unknown"
+        let nodeID = UserDefaults.standard.string(forKey: "nou.relay.nodeID") ?? "unknown"
         let info = "Node ID: \(nodeID)\nURL: \(turl)\n\nexport ANTHROPIC_BASE_URL=\(turl)\nexport ANTHROPIC_API_KEY=sk-ant-dummy\nclaude --dangerously-skip-permissions"
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(info, forType: .string)
         showAlert(L("コピーしました","Copied!"), turl)
@@ -1452,31 +1643,32 @@ class MenubarController {
     // MARK: - Actions: Connect
 
     @objc func toggleAutoTunnel() {
-        let tm = TunnelManager.shared
-        tm.setAutoStart(!tm.isAutoStartEnabled)
-        // Rebuild menu to update checkmark
-        buildMenu()
+        // Relay is always on — show current state
+        let connected = relayConnected
+        let msg = connected
+            ? (relayPublicURL ?? L("接続中...","Connecting..."))
+            : L("未接続 — 再接続中...","Disconnected — reconnecting...")
+        showAlert(L("🌐 NOU Relay","🌐 NOU Relay"), msg)
     }
 
     @objc func startTunnel() {
         let tm = TunnelManager.shared
-        guard !tm.isRunning else {
-            if let url = tm.tunnelURL {
-                showAlert(L("🚇 Tunnel実行中","🚇 Tunnel Running"), url)
-            }
+        // Relay is managed automatically — just show current state
+        if relayConnected, let url = relayPublicURL {
+            showAlert(L("🌐 Relay実行中","🌐 Relay Running"), url)
             return
         }
-        tm.start()
-        // Poll for URL to show alert
-        DispatchQueue.global().async { [weak self] in
-            for _ in 0..<20 {
-                sleep(2)
-                let url = DispatchQueue.main.sync { TunnelManager.shared.tunnelURL }
-                if let url {
-                    Task { @MainActor in
-                        self?.tunnelURL = url
-                        self?.refreshStatus()
-                        self?.showAlert(L("🚇 Tunnel起動！","🚇 Tunnel Active!"), url)
+        Task {
+            await RelayClient.shared.connect()
+            for _ in 0..<10 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                let snap = await RelayClient.shared.snapshot
+                if let u = snap["public_url"] as? String, !u.isEmpty {
+                    await MainActor.run {
+                        self.relayPublicURL = u
+                        self.relayConnected = true
+                        self.refreshStatus()
+                        self.showAlert(L("🌐 Relay起動！","🌐 Relay Active!"), u)
                     }
                     return
                 }
@@ -1485,18 +1677,22 @@ class MenubarController {
     }
 
     @objc func stopTunnel() {
-        TunnelManager.shared.stop()
-        tunnelURL = nil
-        refreshStatus()
+        Task {
+            await RelayClient.shared.disconnect()
+            await MainActor.run {
+                self.relayConnected = false
+                self.relayPublicURL = nil
+                self.tunnelURL = nil
+                self.refreshStatus()
+            }
+        }
     }
 
     @objc func copyRemoteURL() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let log = (try? String(contentsOf: home.appendingPathComponent("cloudflared.log"), encoding: .utf8)) ?? ""
-        guard let r = log.range(of: "https://[a-z0-9-]+\\.trycloudflare\\.com", options: .regularExpression) else {
-            showAlert(L("Tunnelなし","No Tunnel"), L("先にTunnelを起動","Start tunnel first")); return
+        guard let url = relayPublicURL, !url.isEmpty else {
+            showAlert(L("Relayなし","No Relay"), L("接続中...しばらくお待ちください","Connecting... please wait")); return
         }
-        let url = String(log[r]); let key = getAPIKey()
+        let key = getAPIKey()
         let info = "export ANTHROPIC_BASE_URL=\(url)\nexport ANTHROPIC_API_KEY=\(key)\nclaude --dangerously-skip-permissions"
         NSPasteboard.general.clearContents(); NSPasteboard.general.setString(info, forType: .string)
         showAlert(L("コピーしました！","Copied!"), url)
@@ -1529,8 +1725,14 @@ class MenubarController {
 
     @objc func runBench() {
         showAlert(L("ベンチマーク実行中...","Benchmarking..."), "~30s")
-        runShell("~/ai.sh bench") { [weak self] out in
-            self?.showAlert(L("結果","Results"), out.isEmpty ? "Done." : out)
+        let aiSh = NSHomeDirectory() + "/ai.sh"
+        if FileManager.default.fileExists(atPath: aiSh) {
+            runShell("'\(aiSh)' bench") { [weak self] out in
+                self?.showAlert(L("結果","Results"), out.isEmpty ? "Done." : out)
+            }
+        } else {
+            // ダッシュボードのベンチマークページを開く
+            NSWorkspace.shared.open(URL(string: "http://localhost:4001/#bench")!)
         }
     }
 
@@ -1546,6 +1748,53 @@ class MenubarController {
 
     @objc func openGitHub() {
         NSWorkspace.shared.open(URL(string: "https://github.com/yukihamada/nou")!)
+    }
+
+    @objc func openNativeSettings() {
+        NOUSettingsWindowController.shared.showSettings()
+    }
+
+    @objc func pauseNOU() {
+        let alert = NSAlert()
+        alert.messageText = "NOU を休止しますか？"
+        alert.informativeText = "AI サーバーを停止します。メニューバーのアイコンは残りますが、チャットやAPI は使えなくなります。再開するには右クリック→設定から。"
+        alert.addButton(withTitle: "休止する")
+        alert.addButton(withTitle: "キャンセル")
+        if alert.runModal() == .alertFirstButtonReturn {
+            // Stop proxy server, relay, etc. but keep app alive
+            NotificationCenter.default.post(name: Notification.Name("NOU.pause"), object: nil)
+            statusItem.button?.title = "⏸"
+        }
+    }
+
+    @objc func uninstallNOU() {
+        let alert = NSAlert()
+        alert.messageText = "NOU をアンインストールしますか？"
+        alert.informativeText = "NOU.app を削除し、ログイン時の自動起動を解除します。\n\nモデルデータ (~/.ollama/) は残りますので、必要に応じて手動で削除してください。"
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "アンインストール")
+        alert.addButton(withTitle: "キャンセル")
+        if alert.runModal() == .alertFirstButtonReturn {
+            // 1. Remove login item
+            if #available(macOS 13.0, *) {
+                try? SMAppService.mainApp.unregister()
+            }
+            // 2. Remove NOU config
+            let fm = FileManager.default
+            let nouDir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".nou")
+            try? fm.removeItem(at: nouDir)
+            // 3. Move app to trash
+            let appURL = Bundle.main.bundleURL
+            NSWorkspace.shared.recycle([appURL]) { _, error in
+                if let error {
+                    print("[NOU] Uninstall error: \(error)")
+                }
+            }
+            // 4. Quit
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                NSApp.terminate(nil)
+            }
+        }
     }
 
     @objc func quit() { allowSleep(); NSApp.terminate(nil) }
