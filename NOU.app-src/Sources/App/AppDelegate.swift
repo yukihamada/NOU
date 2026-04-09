@@ -281,63 +281,73 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         scheduleModelUpgrade()
     }
 
-    /// Background model upgrade: download a larger model matching this Mac's RAM
+    /// Background model upgrade: download a larger GGUF from HuggingFace (no Ollama needed)
     private func scheduleModelUpgrade() {
         let ramGB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024)
         let fm = FileManager.default
         let modelDir = fm.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/NOU/models")
 
-        // Already have Ollama? Use it for upgrade (much better UX than raw download)
-        let ollamaPath = ["/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"]
-            .first { fm.fileExists(atPath: $0) }
+        // Select optimal GGUF based on RAM
+        let targetFile: String
+        let targetURL: String
+        if ramGB >= 32 {
+            targetFile = "Qwen3.5-14B-Q4_K_M.gguf"
+            targetURL = "https://huggingface.co/Qwen/Qwen3.5-14B-GGUF/resolve/main/qwen3.5-14b-q4_k_m.gguf"
+        } else if ramGB >= 16 {
+            targetFile = "Qwen3.5-7B-Q4_K_M.gguf"
+            targetURL = "https://huggingface.co/Qwen/Qwen3.5-7B-GGUF/resolve/main/qwen3.5-7b-q4_k_m.gguf"
+        } else if ramGB >= 8 {
+            targetFile = "Qwen3.5-4B-Q4_K_M.gguf"
+            targetURL = "https://huggingface.co/Qwen/Qwen3.5-4B-GGUF/resolve/main/qwen3.5-4b-q4_k_m.gguf"
+        } else {
+            return // bundled 0.8B is fine
+        }
 
-        guard let ollama = ollamaPath else {
-            print("[NOU] No Ollama found — keeping bundled 1.7B model")
+        let destPath = modelDir.appendingPathComponent(targetFile)
+        guard !fm.fileExists(atPath: destPath.path) else {
+            print("[NOU] Optimal model already exists: \(targetFile)")
             return
         }
 
-        // Select optimal model based on RAM (0.8B bundled → upgrade)
-        let targetModel: String
-        if ramGB >= 32 {
-            targetModel = "qwen3.5:14b"    // 9GB — great for 32GB+
-        } else if ramGB >= 16 {
-            targetModel = "qwen3.5:7b"     // 5GB — good for 16GB
-        } else if ramGB >= 8 {
-            targetModel = "qwen3.5:4b"     // 3GB — good for 8GB
-        } else {
-            return // bundled 0.8B is fine for <8GB
-        }
-
         Task.detached {
-            // Wait for initial setup to complete (user can chat with 1.7B meanwhile)
-            try? await Task.sleep(nanoseconds: 30_000_000_000) // 30s
+            // Wait for user to start chatting with bundled model first
+            try? await Task.sleep(nanoseconds: 60_000_000_000) // 60s
 
-            // Check if target model already exists in Ollama
-            let checkP = Process()
-            checkP.executableURL = URL(fileURLWithPath: ollama)
-            checkP.arguments = ["list"]
-            let checkPipe = Pipe(); checkP.standardOutput = checkPipe; checkP.standardError = FileHandle.nullDevice
-            try? checkP.run(); checkP.waitUntilExit()
-            let list = String(data: checkPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            if list.contains(targetModel.split(separator: ":").first ?? "") {
-                print("[NOU] Optimal model \(targetModel) already available via Ollama")
-                return
-            }
+            print("[NOU] Background upgrade: downloading \(targetFile) (RAM: \(ramGB)GB)")
+            guard let url = URL(string: targetURL) else { return }
+            do {
+                let (tempURL, response) = try await URLSession.shared.download(from: url)
+                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                    print("[NOU] Download failed: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                    return
+                }
+                let dest = modelDir.appendingPathComponent(targetFile)
+                try? FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
+                try FileManager.default.moveItem(at: tempURL, to: dest)
+                print("[NOU] Background upgrade complete: \(targetFile) (\(try FileManager.default.attributesOfItem(atPath: dest.path)[.size] ?? 0) bytes)")
 
-            print("[NOU] Background upgrade: pulling \(targetModel) via Ollama (RAM: \(ramGB)GB)")
-            let pullP = Process()
-            pullP.executableURL = URL(fileURLWithPath: ollama)
-            pullP.arguments = ["pull", targetModel]
-            pullP.standardOutput = FileHandle.nullDevice
-            pullP.standardError = FileHandle.nullDevice
-            try? pullP.run()
-            pullP.waitUntilExit()
+                // Restart llama-server with the better model
+                let llamaServer = "/opt/homebrew/bin/llama-server"
+                if FileManager.default.fileExists(atPath: llamaServer) {
+                    // Kill old llama-server
+                    let killP = Process()
+                    killP.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+                    killP.arguments = ["-f", "llama-server.*5021"]
+                    try? killP.run(); killP.waitUntilExit()
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
 
-            if pullP.terminationStatus == 0 {
-                print("[NOU] Background upgrade complete: \(targetModel)")
-            } else {
-                print("[NOU] Background upgrade failed for \(targetModel)")
+                    // Start with new model
+                    let p = Process()
+                    p.executableURL = URL(fileURLWithPath: llamaServer)
+                    p.arguments = ["-m", dest.path, "--port", "5021", "-ngl", "99", "--ctx-size", "4096", "--no-warmup", "-t", "4"]
+                    p.standardOutput = FileHandle.nullDevice
+                    p.standardError = FileHandle.nullDevice
+                    try? p.run()
+                    print("[NOU] Restarted llama-server with \(targetFile)")
+                }
+            } catch {
+                print("[NOU] Background upgrade failed: \(error)")
             }
         }
     }
